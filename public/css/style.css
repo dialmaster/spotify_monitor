@@ -1,0 +1,186 @@
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #121212;
+  color: #ffffff;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+h1 {
+  color: #1DB954; /* Spotify green */
+  margin-bottom: 1rem;
+}
+
+h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+h3 {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+  color: #1DB954;
+}
+
+/* Login Page */
+.login-container {
+  text-align: center;
+  max-width: 600px;
+  margin: auto;
+  padding: 2rem;
+  background-color: #181818;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.login-container p {
+  margin-bottom: 2rem;
+  color: #b3b3b3;
+  font-size: 1.2rem;
+}
+
+.login-button {
+  display: inline-block;
+  background-color: #1DB954;
+  color: white;
+  font-weight: bold;
+  padding: 12px 30px;
+  border-radius: 30px;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.login-button:hover {
+  background-color: #1ed760;
+  transform: scale(1.05);
+}
+
+/* Now Playing Page */
+#now-playing-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#track-container, #podcast-container {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  background-color: #181818;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.art-container {
+  flex: 1;
+  min-width: 250px;
+  margin-right: 2rem;
+}
+
+.art-container img {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.info-container {
+  flex: 2;
+  min-width: 300px;
+}
+
+.progress-container {
+  margin-top: 2rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #333;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+
+#progress-bar-fill, #podcast-progress-bar-fill {
+  height: 100%;
+  background-color: #1DB954;
+  width: 0%;
+  transition: width 1s;
+}
+
+.time-display {
+  display: flex;
+  justify-content: space-between;
+  color: #b3b3b3;
+  font-size: 0.9rem;
+}
+
+#loading {
+  text-align: center;
+  padding: 2rem;
+}
+
+.description {
+  max-height: 150px;
+  overflow-y: auto;
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #222;
+  border-radius: 4px;
+  color: #b3b3b3;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#not-playing {
+  text-align: center;
+  padding: 3rem;
+  background-color: #181818;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #track-container, #podcast-container {
+    flex-direction: column;
+  }
+
+  .art-container {
+    margin-right: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .art-container img {
+    max-width: 100%;
+  }
+}

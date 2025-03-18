@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Now Playing - Spotify Monitor</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Spotify Monitor</h1>
+    </header>
+
+    <div id="now-playing-container">
+      <div id="loading">
+        <p>Connecting to Spotify...</p>
+      </div>
+
+      <div id="not-playing" class="hidden">
+        <h2>Nothing Playing</h2>
+        <p>Spotify is not currently playing anything.</p>
+      </div>
+
+      <div id="track-container" class="hidden">
+        <div class="art-container">
+          <img id="album-art" src="" alt="Album Art">
+        </div>
+        <div class="info-container">
+          <h2 id="track-name"></h2>
+          <h3 id="artist-name"></h3>
+          <p id="album-name"></p>
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div id="progress-bar-fill"></div>
+            </div>
+            <div class="time-display">
+              <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="podcast-container" class="hidden">
+        <div class="art-container">
+          <img id="podcast-art" src="" alt="Podcast Art">
+        </div>
+        <div class="info-container">
+          <h2 id="podcast-name"></h2>
+          <h3 id="episode-name"></h3>
+          <p id="release-date"></p>
+          <p id="episode-description" class="description"></p>
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div id="podcast-progress-bar-fill"></div>
+            </div>
+            <div class="time-display">
+              <span id="podcast-current-time">0:00</span> / <span id="podcast-total-time">0:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/nowplaying.js"></script>
+</body>
+</html>
