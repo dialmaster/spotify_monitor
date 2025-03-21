@@ -56,6 +56,9 @@ let tokenInfo = {
 
 // Store current playback state
 let currentPlayback = null;
+// Store play history
+let playHistory = null;
+let lastHistoryFetch = 0;
 
 // Function to check if token is expired
 const isTokenExpired = () => {
@@ -291,7 +294,7 @@ app.get('/login', (req, res) => {
   res.cookie('spotify_auth_state', state);
 
   // Redirect to Spotify auth page
-  const scope = 'user-read-currently-playing user-read-playback-state';
+  const scope = 'user-read-currently-playing user-read-playback-state user-read-recently-played';
   res.redirect('https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
@@ -343,6 +346,72 @@ app.get('/callback', async (req, res) => {
   } catch (error) {
     console.error('Error during token exchange:', error.response ? error.response.data : error.message);
     res.send('Error during authentication');
+  }
+});
+
+// Function to get recently played tracks
+const getRecentlyPlayed = async () => {
+  try {
+    if (isTokenExpired()) {
+      const refreshed = await refreshAccessToken();
+      if (!refreshed) {
+        throw new Error('Failed to refresh access token');
+      }
+    }
+
+    if (!tokenInfo.access_token) {
+      throw new Error('No access token available. Please authorize first.');
+    }
+
+    console.log('Fetching recently played tracks...');
+    const response = await axios({
+      method: 'get',
+      url: 'https://api.spotify.com/v1/me/player/recently-played',
+      params: {
+        limit: 25,
+        additional_types: 'episode,show' // TODO: This is not fetching episodes or shows, only music tracks
+      },
+      headers: {
+        'Authorization': 'Bearer ' + tokenInfo.access_token
+      }
+    });
+
+    playHistory = response.data.items;
+    lastHistoryFetch = Date.now();
+
+    return playHistory;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Spotify API Error (Recently Played):', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message
+      });
+    } else {
+      console.error('Error in getRecentlyPlayed:', error.message);
+    }
+    throw error;
+  }
+};
+
+// API endpoint to get recently played
+app.get('/api/recently-played', async (req, res) => {
+  try {
+    // If we don't have a token, return error
+    if (!tokenInfo.access_token) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Only fetch new data every 5 minutes
+    const fiveMinutesMs = 5 * 60 * 1000;
+    if (!playHistory || Date.now() - lastHistoryFetch > fiveMinutesMs) {
+      await getRecentlyPlayed();
+    }
+
+    res.json(playHistory || []);
+  } catch (error) {
+    console.error('API error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

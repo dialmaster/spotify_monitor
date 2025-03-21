@@ -4,6 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const notPlayingEl = document.getElementById('not-playing');
   const trackContainerEl = document.getElementById('track-container');
   const podcastContainerEl = document.getElementById('podcast-container');
+  const historyContainerEl = document.getElementById('history-container');
+  const historyLoadingEl = document.getElementById('history-loading');
+  const noHistoryEl = document.getElementById('no-history');
+  const historyListEl = document.getElementById('history-list');
 
   // Track Elements
   const albumArtEl = document.getElementById('album-art');
@@ -27,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Current state
   let currentData = null;
   let updateInterval = null;
+  let historyRefreshInterval = null;
 
   // Format time from milliseconds to MM:SS
   const formatTime = (ms) => {
@@ -34,6 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Format date to a readable format
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    const date = new Date(dateString);
+    return date.toLocaleString();
   };
 
   // Update progress bar
@@ -123,6 +135,102 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Fetch recently played tracks and update UI
+  const fetchRecentlyPlayed = async () => {
+    try {
+      historyLoadingEl.classList.remove('hidden');
+      noHistoryEl.classList.add('hidden');
+
+      const response = await fetch('/api/recently-played');
+
+      if (!response.ok) {
+        throw new Error(`Error fetching data: ${response.status}`);
+      }
+
+      const historyItems = await response.json();
+
+      // Hide loading
+      historyLoadingEl.classList.add('hidden');
+
+      // Show no history message if no items
+      if (!historyItems || historyItems.length === 0) {
+        noHistoryEl.classList.remove('hidden');
+        return;
+      }
+
+      // Clear existing items
+      historyListEl.innerHTML = '';
+
+      // Add each history item
+      historyItems.forEach(item => {
+        const historyItemEl = document.createElement('div');
+        historyItemEl.className = 'history-item';
+
+        // Get the item details based on type
+        const historyTrack = item.track;
+        const isTrack = !!historyTrack;
+
+        // For episodes, the item itself is the content
+        const content = isTrack ? historyTrack : item.episode;
+
+        if (!content) return; // Skip if no content
+
+        // Get image
+        let imageUrl = '';
+        if (isTrack && content.album && content.album.images && content.album.images.length > 0) {
+          imageUrl = content.album.images[0].url;
+        } else if (!isTrack && content.images && content.images.length > 0) {
+          imageUrl = content.images[0].url;
+        }
+
+        // Get artist(s)
+        let artistNames = '';
+        if (isTrack && content.artists) {
+          artistNames = content.artists.map(artist => artist.name).join(', ');
+        } else if (!isTrack && content.show) {
+          artistNames = content.show.name;
+        }
+
+        // Get description
+        let description = '';
+        if (isTrack && content.album) {
+          description = `Album: ${content.album.name}`;
+        } else if (!isTrack) {
+          description = content.description || 'No description available';
+        }
+
+        // Format the played at time
+        const playedAt = formatDate(item.played_at);
+
+        // Duration if available
+        let duration = '';
+        if (content.duration_ms) {
+          duration = formatTime(content.duration_ms);
+        }
+
+        historyItemEl.innerHTML = `
+          <img class="history-art" src="${imageUrl}" alt="${isTrack ? 'Album' : 'Podcast'} Art">
+          <div class="history-info">
+            <div class="history-title">${content.name || 'Unknown Title'}</div>
+            <div class="history-artist">${artistNames || 'Unknown Artist'}</div>
+            <div class="history-description">${description}</div>
+            <div class="history-meta">Played: ${playedAt} ${duration ? `• Duration: ${duration}` : ''}</div>
+          </div>
+        `;
+
+        historyListEl.appendChild(historyItemEl);
+      });
+
+      // Show history container
+      historyContainerEl.classList.remove('hidden');
+
+    } catch (error) {
+      console.error('Error fetching recently played data:', error);
+      historyLoadingEl.classList.add('hidden');
+      noHistoryEl.classList.remove('hidden');
+    }
+  };
+
   // Fetch currently playing data from the API
   const fetchCurrentlyPlaying = async () => {
     try {
@@ -148,9 +256,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Initial fetch
+  // Initial fetches
   fetchCurrentlyPlaying();
+  fetchRecentlyPlayed();
 
-  // Refresh data every 30 seconds
+  // Refresh currently playing data every 30 seconds
   setInterval(fetchCurrentlyPlaying, 30000);
+
+  // Refresh history data every 5 minutes (300,000 ms)
+  historyRefreshInterval = setInterval(fetchRecentlyPlayed, 300000);
 });
