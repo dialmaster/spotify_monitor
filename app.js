@@ -569,6 +569,148 @@ const getSpotifyLyrics = async (trackUrl) => {
   }
 };
 
+// Function to get podcast transcript from Spotify using Puppeteer
+const getSpotifyPodcastTranscript = async (episodeUrl) => {
+  try {
+    console.log(`Attempting to fetch podcast transcript from Spotify using Puppeteer: ${episodeUrl}`);
+
+    // Check if we have Spotify web cookies configured
+    if (!SPOTIFY_WEB_COOKIES) {
+      console.log('No Spotify web cookies configured, cannot fetch podcast transcript from Spotify web');
+      return null;
+    }
+
+    // Launch a browser
+    const browser = await puppeteer.launch({
+      headless: 'new', // Use the new headless mode
+      args: [
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-setuid-sandbox',
+        '--no-sandbox',
+      ]
+    });
+
+    try {
+      // Create a new page
+      const page = await browser.newPage();
+
+      // Parse and set cookies from the configuration
+      const cookieStr = SPOTIFY_WEB_COOKIES;
+      const cookies = cookieStr.split(';').map(pair => {
+        const [name, value] = pair.trim().split('=');
+        return { name, value, domain: '.spotify.com', path: '/' };
+      });
+
+      await page.setCookie(...cookies);
+
+      // Set a realistic user agent
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
+
+      // Navigate to the Spotify episode URL
+      console.log('Navigating to Spotify episode page...');
+      await page.goto(episodeUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+      // Log the current URL to see if we were redirected
+      const currentUrl = page.url();
+      console.log('Current page URL:', currentUrl);
+
+      // Take a screenshot for debugging (optional, uncomment if needed)
+      // await page.screenshot({ path: 'spotify-podcast-page.png' });
+
+      // Check if we're on a login page
+      const hasLoginForm = await page.evaluate(() => {
+        return !!document.querySelector('button[data-testid="login-button"]');
+      });
+
+      if (hasLoginForm) {
+        console.log('Login form detected - authentication may have failed');
+        await browser.close();
+        return null;
+      }
+
+      // Check for the Transcript navigation link
+      const hasTranscriptLink = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('a.e-9640-nav-bar-list-item')).some(
+          el => el.textContent.trim() === 'Transcript'
+        );
+      });
+
+      if (!hasTranscriptLink) {
+        console.log('No transcript link found - this podcast may not have a transcript');
+        await browser.close();
+        return null;
+      }
+
+      // Click on the Transcript link
+      console.log('Clicking on Transcript tab...');
+      await page.evaluate(() => {
+        const transcriptLinks = Array.from(document.querySelectorAll('a.e-9640-nav-bar-list-item')).filter(
+          el => el.textContent.trim() === 'Transcript'
+        );
+        if (transcriptLinks.length > 0) {
+          transcriptLinks[0].click();
+        }
+      });
+
+      // Wait for transcript to load
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for content to load after clicking
+
+      // Check for transcript container
+      console.log('Looking for transcript content...');
+      const hasTranscriptContainer = await page.evaluate(() => {
+        // Look for the div with a class beginning with NavBar__NavBarPage
+        const navBarPages = Array.from(document.querySelectorAll('div[class^="NavBar__NavBarPage"]'));
+        return navBarPages.length > 0;
+      });
+
+      if (!hasTranscriptContainer) {
+        console.log('No transcript container found after clicking link');
+        await browser.close();
+        return null;
+      }
+
+      // Extract transcript content
+      console.log('Extracting transcript...');
+      const transcript = await page.evaluate(() => {
+        // Find the NavBar__NavBarPage container
+        const navBarPages = Array.from(document.querySelectorAll('div[class^="NavBar__NavBarPage"]'));
+        if (navBarPages.length === 0) return null;
+
+        const container = navBarPages[0];
+
+        // Get all text spans within the container
+        const textSpans = Array.from(container.querySelectorAll('span[data-encore-id="text"][dir="auto"]'));
+
+        // Extract and join the text content
+        return textSpans.map(el => el.textContent.trim()).join('\n');
+      });
+
+      // Log stats and limit to 4000 characters
+      if (transcript) {
+        const truncatedTranscript = transcript.substring(0, 4000);
+        const originalLength = transcript.length;
+        const lineCount = transcript.split('\n').length;
+        console.log(`Successfully extracted transcript (${lineCount} lines, ${originalLength} chars, truncated to 4000 chars)`);
+
+        await browser.close();
+        return truncatedTranscript;
+      } else {
+        console.log('No transcript content found');
+        await browser.close();
+        return null;
+      }
+    } catch (innerError) {
+      console.error('Error during Puppeteer operation:', innerError.message);
+      await browser.close();
+      return null;
+    }
+  } catch (error) {
+    console.error('Error scraping podcast transcript with Puppeteer:', error.message);
+    return null;
+  }
+};
+
 // Function to get lyrics from Spotify API directly
 const getSpotifyApiLyrics = async (trackId) => {
   try {
@@ -595,8 +737,37 @@ const getSpotifyApiLyrics = async (trackId) => {
 // API endpoint to fetch lyrics for a track
 app.get('/api/lyrics', async (req, res) => {
   try {
-    const { title, artist, spotifyUrl } = req.query;
+    const { title, artist, spotifyUrl, contentType } = req.query;
 
+    // If this is a podcast episode request
+    if (contentType === 'episode') {
+      if (!title || !spotifyUrl) {
+        return res.status(400).json({ error: 'Missing required parameters for podcast: title and spotifyUrl' });
+      }
+
+      console.log(`Fetching transcript for podcast episode: "${title}"`);
+
+      // Try to get transcript from the Spotify web page
+      const transcript = await getSpotifyPodcastTranscript(spotifyUrl);
+
+      if (transcript) {
+        console.log('Successfully fetched podcast transcript from Spotify');
+        return res.json({
+          lyrics: transcript, // We use the lyrics field for consistency with the frontend
+          title,
+          source: 'spotify-podcast-transcript',
+          url: spotifyUrl
+        });
+      } else {
+        console.log('Could not fetch transcript for podcast episode');
+        return res.json({
+          lyrics: null,
+          error: 'No transcript available for this podcast episode'
+        });
+      }
+    }
+
+    // Regular track lyrics request
     if (!title || !artist) {
       return res.status(400).json({ error: 'Missing required parameters: title and artist' });
     }
@@ -719,6 +890,9 @@ app.get('/api/age-evaluation', async (req, res) => {
       content = `Podcast: ${title}\n`;
       if (description) {
         content += `\nDescription:\n${description}`;
+      }
+      if (lyrics) {
+        content += `\nLyrics:\n${lyrics}`;
       }
     }
 

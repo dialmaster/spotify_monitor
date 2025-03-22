@@ -140,8 +140,84 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Fetch and display transcript for a podcast
+  const fetchAndDisplayTranscript = async (episodeName, episodeUrl) => {
+    try {
+      // Reset lyrics UI (we'll use the same container for transcripts)
+      lyricsContainerEl.classList.remove('hidden');
+      lyricsLoadingEl.classList.remove('hidden');
+      lyricsContentEl.classList.add('hidden');
+      lyricsNotFoundEl.classList.add('hidden');
+      lyricsSourceEl.classList.add('hidden');
+
+      // Create a cache key from episode name
+      const cacheKey = `podcast:::${episodeName}`;
+
+      // Check if we already have transcript for this episode in cache
+      if (lyricsCache.has(cacheKey)) {
+        console.log(`Using cached transcript for "${episodeName}"`);
+        const cachedData = lyricsCache.get(cacheKey);
+        displayLyrics(cachedData); // We can reuse the displayLyrics function
+        return;
+      }
+
+      // Limit cache size (keep no more than 50 entries)
+      if (lyricsCache.size >= 50) {
+        // Get the oldest key and delete it
+        const oldestKey = lyricsCache.keys().next().value;
+        lyricsCache.delete(oldestKey);
+        console.log('Lyrics/transcript cache full, removed oldest entry');
+      }
+
+      console.log(`Requesting transcript for podcast episode: "${episodeName}"`);
+
+      // Verify we have the Spotify URL
+      if (!episodeUrl) {
+        console.error('No Spotify URL available for this podcast episode');
+        lyricsLoadingEl.classList.add('hidden');
+        lyricsNotFoundEl.classList.remove('hidden');
+        // Since we couldn't get transcript, pass null to age evaluation
+        if (currentData && currentData.item) {
+          fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null);
+        }
+        return;
+      }
+
+      console.log(`Including Spotify URL in transcript request: ${episodeUrl}`);
+
+      // Fetch transcript from the API
+      const response = await fetch(`/api/lyrics?title=${encodeURIComponent(episodeName)}&spotifyUrl=${encodeURIComponent(episodeUrl)}&contentType=episode`);
+
+      if (!response.ok) {
+        throw new Error(`Error fetching transcript: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Transcript API response:', data);
+
+      // Store in cache even if no transcript was found (to avoid re-fetching)
+      lyricsCache.set(cacheKey, data);
+
+      // Display the transcript
+      displayLyrics(data); // We can reuse the displayLyrics function
+
+      // We don't call fetchAndDisplayAgeEvaluation here because it will be called by displayLyrics
+    } catch (error) {
+      console.error('Error fetching podcast transcript:', error);
+      lyricsLoadingEl.classList.add('hidden');
+      lyricsNotFoundEl.classList.remove('hidden');
+      lyricsNotFoundEl.textContent = 'No transcript available for this podcast episode';
+
+      // Even if transcript fetch fails, we should still do age evaluation
+      if (currentData && currentData.item) {
+        fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null);
+      }
+    }
+  };
+
   // Fetch and display age evaluation for a track or podcast
   const fetchAndDisplayAgeEvaluation = async (item, type, lyrics) => {
+    console.log('Fetching age evaluation for:', item, type, lyrics);
     try {
       // Select the appropriate age evaluation elements based on content type
       const ageContainerEl = type === 'track' ? trackAgeContainerEl : podcastAgeContainerEl;
@@ -203,6 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (type === 'episode') {
         if (item.description) {
           params.append('description', item.description);
+        }
+        if (lyrics) {
+          params.append('lyrics', lyrics);
         }
       }
 
@@ -325,6 +404,8 @@ document.addEventListener('DOMContentLoaded', () => {
           lyricsSourceLinkEl.textContent = 'Source: Spotify Web';
         } else if (data.source === 'genius') {
           lyricsSourceLinkEl.textContent = 'Source: Genius';
+        } else if (data.source === 'spotify-podcast-transcript') {
+          lyricsSourceLinkEl.textContent = 'Source: Spotify Podcast Transcript';
         } else {
           lyricsSourceLinkEl.textContent = 'View source';
         }
@@ -334,18 +415,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Now that we have lyrics, fetch age evaluation
       if (currentData && currentData.item) {
-        fetchAndDisplayAgeEvaluation(currentData.item, 'track', data.lyrics);
+        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, data.lyrics);
       }
     } else {
       // Show not found message
       lyricsNotFoundEl.classList.remove('hidden');
+
+      // Set appropriate text based on content type
+      if (currentData && currentData.type === 'episode') {
+        lyricsNotFoundEl.textContent = 'No transcript available for this podcast episode';
+      } else {
+        lyricsNotFoundEl.textContent = 'No lyrics found for this track';
+      }
+
       if (data.error) {
-        console.error('Lyrics error:', data.error);
+        console.error('Lyrics/transcript error:', data.error);
       }
 
       // Even without lyrics, we can still evaluate based on track info
       if (currentData && currentData.item) {
-        fetchAndDisplayAgeEvaluation(currentData.item, 'track', null);
+        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, null);
       }
     }
   };
@@ -477,8 +566,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Show podcast container
       podcastContainerEl.classList.remove('hidden');
 
-      // Fetch age evaluation for the podcast
-      fetchAndDisplayAgeEvaluation(data.item, 'episode', null);
+      // Attempt to fetch podcast transcript if we have a Spotify URL
+      if (data.item.external_urls && data.item.external_urls.spotify) {
+        fetchAndDisplayTranscript(data.item.name, data.item.external_urls.spotify);
+        // Remove the direct age evaluation call - it will be called after transcript fetch
+      } else {
+        // If no Spotify URL, we can't fetch transcript, so evaluate without it
+        fetchAndDisplayAgeEvaluation(data.item, 'episode', null);
+      }
     }
   };
 
