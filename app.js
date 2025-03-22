@@ -6,6 +6,7 @@ const querystring = require('querystring');
 const cookieParser = require('cookie-parser');
 const Genius = require('genius-lyrics');
 const OpenAI = require('openai');
+const puppeteer = require('puppeteer');
 
 const app = express();
 
@@ -44,6 +45,8 @@ const GENIUS_API_KEY = typeof config.geniusApiKey === 'string' ? config.geniusAp
 const OPENAI_API_KEY = typeof config.openAiApiKey === 'string' ? config.openAiApiKey : undefined;
 // Age evaluation configuration
 const AGE_EVALUATION_CONFIG = config.ageEvaluation || { listenerAge: 13, customInstructions: "" };
+// Spotify web cookies for authenticated requests
+const SPOTIFY_WEB_COOKIES = typeof config.spotifyWebCookies === 'string' ? config.spotifyWebCookies : '';
 
 // Initialize OpenAI if API key is available
 let openai = null;
@@ -434,16 +437,202 @@ app.get('/api/recently-played', async (req, res) => {
   }
 });
 
+// Function to get lyrics directly from Spotify using Puppeteer
+const getSpotifyLyrics = async (trackUrl) => {
+  try {
+    console.log(`Attempting to fetch lyrics from Spotify using Puppeteer: ${trackUrl}`);
+
+    // Check if we have Spotify web cookies configured
+    if (!SPOTIFY_WEB_COOKIES) {
+      console.log('No Spotify web cookies configured, cannot fetch lyrics from Spotify web');
+      return null;
+    }
+
+    // Launch a browser
+    const browser = await puppeteer.launch({
+      headless: 'new', // Use the new headless mode
+      args: [
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-setuid-sandbox',
+        '--no-sandbox',
+      ]
+    });
+
+    try {
+      // Create a new page
+      const page = await browser.newPage();
+
+      // Parse and set cookies from the configuration
+      const cookieStr = SPOTIFY_WEB_COOKIES;
+      const cookies = cookieStr.split(';').map(pair => {
+        const [name, value] = pair.trim().split('=');
+        return { name, value, domain: '.spotify.com', path: '/' };
+      });
+
+      await page.setCookie(...cookies);
+
+      // Set a realistic user agent
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
+
+      // Navigate to the Spotify track URL
+      console.log('Navigating to Spotify track page...');
+      await page.goto(trackUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+      // Log the current URL to see if we were redirected
+      const currentUrl = page.url();
+      console.log('Current page URL:', currentUrl);
+
+      // Take a screenshot for debugging (optional, uncomment if needed)
+      // await page.screenshot({ path: 'spotify-page.png' });
+
+      // Wait for lyrics container with timeout
+      console.log('Waiting for lyrics container...');
+      try {
+        await page.waitForSelector('div[data-testid="lyrics-container"]', { timeout: 10000 });
+        console.log('Lyrics container found!');
+      } catch (e) {
+        console.log('No lyrics container found within timeout:', e.message);
+
+        // Check if we're on a login page or if the page has other expected elements
+        const pageTitle = await page.title();
+        console.log('Page title:', pageTitle);
+
+        const hasLoginForm = await page.evaluate(() => {
+          return !!document.querySelector('button[data-testid="login-button"]');
+        });
+
+        if (hasLoginForm) {
+          console.log('Login form detected - authentication may have failed');
+        }
+
+        // Check for other track elements to see if we're on the right page
+        const hasTrackInfo = await page.evaluate(() => {
+          return !!document.querySelector('[data-testid="track-info"]') ||
+                 !!document.querySelector('[data-testid="now-playing-widget"]');
+        });
+
+        if (hasTrackInfo) {
+          console.log('Track info found but no lyrics - song might not have lyrics available');
+        }
+
+        // If we found track info but no lyrics, the song might not have lyrics
+        if (hasTrackInfo && !hasLoginForm) {
+          await browser.close();
+          return null; // No lyrics available for this track
+        }
+
+        // If we hit the login page or found nothing familiar, auth failed
+        await browser.close();
+        return null;
+      }
+
+      // Extract lyrics content
+      console.log('Extracting lyrics...');
+      const lyrics = await page.evaluate(() => {
+        // Get all visible lyrics lines
+        const visibleLines = Array.from(
+          document.querySelectorAll('div[data-testid="lyrics-container"] p[data-testid="lyrics-line-always-visible"]')
+        ).map(el => el.textContent);
+
+        // Also try to get potentially hidden lines (in "Show more" sections)
+        const hiddenLines = Array.from(
+          document.querySelectorAll('div[data-testid="lyrics-container"] span[aria-hidden="true"] p')
+        ).map(el => el.textContent);
+
+        // Combine all lines
+        return [...visibleLines, ...hiddenLines].join('\n');
+      });
+
+      // Log stats
+      const lineCount = lyrics.split('\n').length;
+      console.log(`Successfully extracted ${lineCount} lines of lyrics from Spotify`);
+
+      // Close the browser
+      await browser.close();
+
+      // Return the lyrics if we found some
+      if (lyrics && lyrics.trim().length > 0) {
+        return lyrics;
+      } else {
+        console.log('No lyrics content found in the container');
+        return null;
+      }
+    } catch (innerError) {
+      console.error('Error during Puppeteer operation:', innerError.message);
+      await browser.close();
+      return null;
+    }
+  } catch (error) {
+    console.error('Error scraping Spotify lyrics with Puppeteer:', error.message);
+    return null;
+  }
+};
+
+// Function to get lyrics from Spotify API directly
+const getSpotifyApiLyrics = async (trackId) => {
+  try {
+    console.log(`Attempting to get lyrics for track ID: ${trackId}`);
+
+    // Check if we have Spotify web cookies configured
+    if (!SPOTIFY_WEB_COOKIES) {
+      console.log('No Spotify web cookies configured, cannot fetch lyrics from Spotify');
+      return null;
+    }
+
+    // Since there is no actual Spotify lyrics API endpoint,
+    // we'll use the Puppeteer implementation with the track URL
+    const trackUrl = `https://open.spotify.com/track/${trackId}`;
+
+    // Use our Puppeteer implementation
+    return await getSpotifyLyrics(trackUrl);
+  } catch (error) {
+    console.error('Error getting lyrics:', error.message);
+    return null;
+  }
+};
+
 // API endpoint to fetch lyrics for a track
 app.get('/api/lyrics', async (req, res) => {
   try {
-    const { title, artist } = req.query;
+    const { title, artist, spotifyUrl } = req.query;
 
     if (!title || !artist) {
       return res.status(400).json({ error: 'Missing required parameters: title and artist' });
     }
 
     console.log(`Fetching lyrics for "${title}" by ${artist}`);
+
+    // Variables to hold our results
+    let lyrics = null;
+    let source = null;
+
+    // Try each method in sequence until we get lyrics
+
+    // First, try the Spotify web page if we have a URL
+    if (spotifyUrl) {
+      console.log(`Using Spotify URL: ${spotifyUrl}`);
+
+      // Try to get lyrics from the Spotify web page
+      lyrics = await getSpotifyLyrics(spotifyUrl);
+
+      if (lyrics) {
+        source = 'spotify-web';
+        console.log('Successfully fetched lyrics from Spotify web page');
+
+        return res.json({
+          lyrics,
+          title,
+          artist,
+          source,
+          url: spotifyUrl
+        });
+      } else {
+        console.log('Could not fetch lyrics from Spotify web page, falling back to Genius');
+      }
+    }
+
+    // Fall back to Genius if Spotify methods failed or weren't attempted
     console.log(`Using Genius API key: ${GENIUS_API_KEY ? 'Yes (configured)' : 'No (falling back to scraping)'}`);
 
     // Initialize Genius client exactly as shown in docs
@@ -464,13 +653,15 @@ app.get('/api/lyrics', async (req, res) => {
       console.log(`Found song: ${song.title} by ${song.artist.name}`);
 
       // Fetch the lyrics
-      const lyrics = await song.lyrics();
+      lyrics = await song.lyrics();
+      source = 'genius';
 
       res.json({
         lyrics,
         title: song.title,
         artist: song.artist.name,
         image: song.image,
+        source,
         url: song.url
       });
     } catch (searchError) {
@@ -620,12 +811,18 @@ DO NOT wrap your response in markdown code blocks.`,
   }
 });
 
+// Helper route for Spotify cookies setup
+app.get('/cookies-help', (req, res) => {
+  res.render('cookies-help');
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Using config file: ${configPath}`);
   console.log(`Genius API key configured: ${GENIUS_API_KEY ? 'Yes' : 'No'}`);
   console.log(`OpenAI API key configured: ${OPENAI_API_KEY ? 'Yes' : 'No'}`);
+  console.log(`Spotify Web cookies configured: ${SPOTIFY_WEB_COOKIES ? 'Yes' : 'No'}`);
   console.log(`Age evaluation configured for listener age: ${AGE_EVALUATION_CONFIG.listenerAge}`);
   if (AGE_EVALUATION_CONFIG.customInstructions) {
     console.log(`Custom age evaluation instructions: "${AGE_EVALUATION_CONFIG.customInstructions}"`);

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify Cookies Setup - Spotify Monitor</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .step {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background-color: #222;
+      border-radius: 0.5rem;
+    }
+    .step h3 {
+      margin-top: 0;
+      color: #1DB954;
+    }
+    .code-block {
+      background-color: #333;
+      padding: 0.8rem;
+      border-radius: 0.3rem;
+      font-family: monospace;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      margin: 1rem 0;
+    }
+    .browser-instructions {
+      margin-top: 1rem;
+    }
+    .browser-tab {
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      background-color: #333;
+      display: inline-block;
+      margin-right: 0.5rem;
+      border-top-left-radius: 0.3rem;
+      border-top-right-radius: 0.3rem;
+    }
+    .browser-tab.active {
+      background-color: #444;
+    }
+    .browser-content {
+      display: none;
+      padding: 1rem;
+      background-color: #444;
+      border-radius: 0.3rem;
+      border-top-left-radius: 0;
+    }
+    .browser-content.active {
+      display: block;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #555;
+      border-radius: 0.3rem;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Spotify Cookies Setup</h1>
+      <p>Learn how to extract your Spotify cookies to enable lyrics scraping</p>
+    </header>
+
+    <div class="content">
+      <div class="step">
+        <h3>Step 1: Log in to Spotify Web Player</h3>
+        <p>Make sure you're logged in to <a href="https://open.spotify.com" target="_blank">Spotify Web Player</a> in your browser.</p>
+      </div>
+
+      <div class="step">
+        <h3>Step 2: Extract your cookies</h3>
+        <p><strong>Recommended Method:</strong> Open the browser console and use the <code>document.cookie</code> command:</p>
+
+        <ol>
+          <li>Open <a href="https://open.spotify.com" target="_blank">Spotify Web Player</a> and make sure you're logged in</li>
+          <li>Press F12 or right-click and select "Inspect" to open Developer Tools</li>
+          <li>Click on the "Console" tab</li>
+          <li>Type <code>document.cookie</code> and press Enter</li>
+          <li>The result is your cookies in the exact format needed (copy the entire string)</li>
+        </ol>
+
+        <div class="code-block">document.cookie</div>
+
+        <div style="border: 1px dashed #555; padding: 1rem; margin: 1rem 0; text-align: center; background-color: #333;">
+          <p>Example of using document.cookie in the console:</p>
+          <img src="/img/console-cookies-example.png" alt="Example of document.cookie in browser console" style="max-width: 100%; height: auto; display: inline-block;">
+          <p style="font-style: italic; color: #999; margin-top: 0.5rem;">Note: This is an example. The actual image will be loaded if you place a screenshot named "console-cookies-example.png" in your public/img directory.</p>
+        </div>
+
+        <p><strong>Alternative Methods:</strong> If you prefer, you can also extract cookies through the Application/Storage tabs:</p>
+
+        <div class="browser-instructions">
+          <div class="browser-tabs">
+            <div class="browser-tab active" onclick="switchTab('chrome')">Chrome</div>
+            <div class="browser-tab" onclick="switchTab('firefox')">Firefox</div>
+            <div class="browser-tab" onclick="switchTab('edge')">Edge</div>
+          </div>
+
+          <div id="chrome" class="browser-content active">
+            <ol>
+              <li>Open <a href="https://open.spotify.com" target="_blank">Spotify Web Player</a> and make sure you're logged in</li>
+              <li>Press F12 or right-click and select "Inspect" to open Developer Tools</li>
+              <li>Go to the "Application" tab</li>
+              <li>In the left sidebar, expand "Storage" and click on "Cookies", then "https://open.spotify.com"</li>
+              <li>You'll see a list of all cookies. Click on a cookie, then press Ctrl+A to select all cookies</li>
+              <li>Right-click on the selected cookies and choose "Copy" or press Ctrl+C</li>
+            </ol>
+          </div>
+
+          <div id="firefox" class="browser-content">
+            <ol>
+              <li>Open <a href="https://open.spotify.com" target="_blank">Spotify Web Player</a> and make sure you're logged in</li>
+              <li>Press F12 or right-click and select "Inspect" to open Developer Tools</li>
+              <li>Go to the "Storage" tab</li>
+              <li>In the left sidebar, expand "Cookies" and click on "https://open.spotify.com"</li>
+              <li>You'll see a list of all cookies</li>
+              <li>Right-click on any cookie and select "Copy All"</li>
+            </ol>
+          </div>
+
+          <div id="edge" class="browser-content">
+            <ol>
+              <li>Open <a href="https://open.spotify.com" target="_blank">Spotify Web Player</a> and make sure you're logged in</li>
+              <li>Press F12 or right-click and select "Inspect" to open Developer Tools</li>
+              <li>Go to the "Application" tab</li>
+              <li>In the left sidebar, expand "Storage" and click on "Cookies", then "https://open.spotify.com"</li>
+              <li>You'll see a list of all cookies. Click on a cookie, then press Ctrl+A to select all cookies</li>
+              <li>Right-click on the selected cookies and choose "Copy" or press Ctrl+C</li>
+            </ol>
+          </div>
+        </div>
+
+        <p>You can also use a browser extension like "EditThisCookie" or "Cookie-Editor" to export all Spotify cookies at once.</p>
+      </div>
+
+      <div class="step">
+        <h3>Step 3: Format the cookies</h3>
+        <p>When using the <code>document.cookie</code> method, the cookies are already in the correct format and ready to use.</p>
+        <p>If you used one of the alternative methods, the cookies need to be in the standard HTTP Cookie header format, which is a semicolon-separated list of name=value pairs.</p>
+        <p>Example format:</p>
+        <div class="code-block">sp_dc=AQBx...; sp_key=...; sp_t=...; _ga=...; etc.</div>
+
+        <div style="background-color: #2a2a2a; border-left: 4px solid #1DB954; padding: 1rem; margin-top: 1rem;">
+          <p><strong>Important:</strong> The most crucial cookies for Spotify authentication are:</p>
+          <ul style="margin-top: 0.5rem;">
+            <li><code>sp_dc</code> - Main authentication cookie</li>
+            <li><code>sp_key</code> - Secondary authentication token</li>
+            <li><code>sp_t</code> - Session tracking</li>
+          </ul>
+          <p style="margin-top: 0.5rem;">Make sure these cookies are included in your string if you're manually selecting which cookies to use.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>Step 4: Add cookies to your config file</h3>
+        <p>Open your <code>config.json</code> file and add the cookies string to the <code>spotifyWebCookies</code> property:</p>
+        <div class="code-block">{
+  "clientId": "your-spotify-client-id",
+  "clientSecret": "your-spotify-client-secret",
+  "redirectUri": "http://localhost:8888/callback",
+  "port": 8888,
+  "monitorInterval": 30000,
+  "geniusApiKey": "your-genius-api-key",
+  "openAiApiKey": "your-openai-api-key",
+  "ageEvaluation": {
+    "listenerAge": 13,
+    "customInstructions": "..."
+  },
+  "spotifyWebCookies": "sp_dc=AQBx...; sp_key=...; sp_t=...; _ga=...; etc."
+}</div>
+      </div>
+
+      <div class="step">
+        <h3>Step 5: Restart the application</h3>
+        <p>Restart your Spotify Monitor application for the changes to take effect.</p>
+      </div>
+
+      <div class="step">
+        <h3>Technical Notes</h3>
+        <p>The application now uses Puppeteer (a headless Chrome browser) to fetch lyrics from Spotify. This provides a more robust solution that better mimics a real browser.</p>
+        <ul>
+          <li>Puppeteer loads the full Spotify web player and extracts lyrics similar to how you would see them in your browser</li>
+          <li>This approach helps overcome authentication issues and page structure changes</li>
+          <li>Headless mode allows this to run without showing a visible browser window</li>
+        </ul>
+        <p>For this to work properly, ensure your cookies are fresh and contain all the necessary authentication tokens.</p>
+      </div>
+
+      <div class="step">
+        <h3>Important Notes</h3>
+        <ul>
+          <li>Cookies contain sensitive authentication information. Do not share your <code>config.json</code> file with others.</li>
+          <li>Spotify cookies typically expire after some time. If lyrics scraping stops working, you may need to update your cookies.</li>
+          <li>This approach is for personal use only and should follow Spotify's terms of service.</li>
+        </ul>
+      </div>
+
+      <div class="actions">
+        <a href="/" class="button">Back to main page</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      // Hide all content
+      document.querySelectorAll('.browser-content').forEach(el => {
+        el.classList.remove('active');
+      });
+
+      // Deactivate all tabs
+      document.querySelectorAll('.browser-tab').forEach(el => {
+        el.classList.remove('active');
+      });
+
+      // Show selected content and activate tab
+      document.getElementById(tabId).classList.add('active');
+      document.querySelector(`.browser-tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+    }
+  </script>
+</body>
+</html>

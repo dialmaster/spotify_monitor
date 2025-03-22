@@ -9,5 +9,6 @@
   "ageEvaluation": {
     "listenerAge": 13,
     "customInstructions": "Please be lenient on the age rating, keeping in mind that we generally want to allow content that would be heard on most mainstream radio stations. Be more strict if there is explicit sexual content or discussion of drugs. If the lyrics include the work 'fuck', it should be rated as 18+."
-  }
+  },
+  "spotifyWebCookies": "PASTE_YOUR_COOKIES_HERE (go to Spotify Web Player, open console with F12, type document.cookie and press Enter, then copy the result)"
 }

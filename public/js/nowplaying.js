@@ -111,8 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       console.log(`Requesting lyrics for "${trackName}" by ${artistName}`);
 
-      // Fetch lyrics from the API
-      const response = await fetch(`/api/lyrics?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}`);
+      // Get the spotify URL from the current track if available
+      let spotifyUrl = '';
+      if (currentData && currentData.item && currentData.item.external_urls && currentData.item.external_urls.spotify) {
+        spotifyUrl = currentData.item.external_urls.spotify;
+        console.log(`Including Spotify URL in lyrics request: ${spotifyUrl}`);
+      }
+
+      // Fetch lyrics from the API with the spotify URL included
+      const response = await fetch(`/api/lyrics?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}${spotifyUrl ? `&spotifyUrl=${encodeURIComponent(spotifyUrl)}` : ''}`);
 
       if (!response.ok) {
         throw new Error(`Error fetching lyrics: ${response.status}`);
@@ -310,6 +317,18 @@ document.addEventListener('DOMContentLoaded', () => {
       // Set up source link
       if (data.url) {
         lyricsSourceLinkEl.href = data.url;
+
+        // Update source text based on where the lyrics came from
+        if (data.source === 'spotify-api') {
+          lyricsSourceLinkEl.textContent = 'Source: Spotify API';
+        } else if (data.source === 'spotify-web') {
+          lyricsSourceLinkEl.textContent = 'Source: Spotify Web';
+        } else if (data.source === 'genius') {
+          lyricsSourceLinkEl.textContent = 'Source: Genius';
+        } else {
+          lyricsSourceLinkEl.textContent = 'View source';
+        }
+
         lyricsSourceEl.classList.remove('hidden');
       }
 
