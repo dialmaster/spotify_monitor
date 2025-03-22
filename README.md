@@ -1,8 +1,48 @@
 # Spotify Account Monitor
 
-Spotify Account Monitor is a comprehensive web application that allows parents and guardians to track and monitor Spotify listening activity in real-time. The app displays currently playing tracks or podcasts with detailed information including album art, artists, playback progress, and recently played content. It features lyrics retrieval via the Genius API, enabling users to review song content, and leverages OpenAI's API to provide age appropriateness evaluations for both music and podcast content based on configurable age thresholds. With customizable monitoring intervals and multi-account support, this tool helps parents make informed decisions about their children's music and podcast consumption while maintaining a sleek, user-friendly interface that updates automatically without requiring page refreshes.
+Spotify Account Monitor is a comprehensive web application that allows parents and guardians to track and monitor Spotify listening activity in real-time. The app displays currently playing tracks or podcasts with detailed information including album art, artists, playback progress, and recently played content. It features lyrics retrieval via the Spotify or the Genius API, enabling users to review song content, and leverages OpenAI's API to provide age appropriateness evaluations for both music and podcast content based on configurable age thresholds. With customizable monitoring intervals and multi-account support, this tool helps parents make informed decisions about their children's music and podcast consumption while maintaining a sleek, user-friendly interface that updates automatically without requiring page refreshes.
+
+## Feature Availability Based on Configuration
+
+The app has different levels of functionality depending on which API keys you configure:
+
+- **Basic Features** (Spotify Client ID and Secret only):
+  - View currently playing tracks and podcasts
+  - Display album art, artist information, and playback progress
+  - View recently played content
+  - Basic playback monitoring
+
+- **With Spotify Web Cookies**:
+  - All basic features
+  - Retrieve official lyrics directly from Spotify
+  - Access podcast transcripts when available on Spotify
+  - Higher quality source material for age evaluations
+
+- **With Genius API Key**:
+  - All basic features
+  - Fetch and display lyrics for songs (through Genius)
+  - Lyrics through Genius will not be as accurate as through Spotify
+  - Without this, lyrics may still be available but with lower success rate
+
+**NOTE**: If neither Genius API Key nor Spotify Web Cookies are provided, the app will be unable to fetch lyrics at all for display, this will also significantly lower the accuracy of AI age appropriateness evaluations.
+
+- **With OpenAI API Key**:
+  - All basic features
+  - AI-powered age appropriateness evaluations for songs and podcasts
+  - Note: Without this, the age evaluation feature will be disabled
+
+## System Requirements
+**Note**: *This application has only been tested in WSL2 on Windows, but should work fine in Linux as well*
+
+- Node.js 14 or higher
+- npm or yarn
+- This application uses Puppeteer to scrape web lyrics, the following dependency is required:
+  ```bash
+  sudo apt-get update && sudo apt-get install -y libgbm1
+  ```
 
 ## Setup Instructions
+**NOTE**: *The instructions below show `8888` for the port, but this is actually dependent on the port you specify in your config.json*
 
 1. **Create a Spotify Developer App**:
    - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications)
@@ -19,43 +59,68 @@ Spotify Account Monitor is a comprehensive web application that allows parents a
    - Fill in the required information, include "http://localhost:8888" as the App Website URL
    - After creating the client, you'll get a Client ID, Client Secret, and Client Access Token
    - Copy the Client Access Token - this is your Genius API key
+   - Without this API key, lyrics retrieval will fall back to web scraping with limited success
 
 3. **Get an OpenAI API Key (Optional)**:
    - Go to [OpenAI API Keys](https://platform.openai.com/api-keys)
    - Sign in or create an account
    - Create a new API key
    - Copy the API key (it will only be shown once)
+   - Without this API key, the age evaluation feature will be disabled completely
 
 4. **Configure the application**:
-   - Edit `config.json` and add your Spotify Client ID and Client Secret:
+   - Copy the example config to create your own:
+     ```bash
+     cp config.json.example config.json
+     ```
+   - Edit `config.json` and add your Spotify Client ID and Client Secret (required)
+   - Add optional API keys as needed for additional features:
    ```json
    {
      "clientId": "YOUR_SPOTIFY_CLIENT_ID",
      "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
      "redirectUri": "http://localhost:8888/callback",
+     "port": 8888,
      "monitorInterval": 30000,
-     "geniusApiKey": "YOUR_GENIUS_API_KEY",  // Optional
-     "openAiApiKey": "YOUR_OPENAI_API_KEY"   // Optional
+     "geniusApiKey": "YOUR_GENIUS_API_KEY",
+     "openAiApiKey": "YOUR_OPENAI_API_KEY",
+     "ageEvaluation": {
+       "listenerAge": 13,
+       "customInstructions": "Optional custom instructions for age evaluation"
+     },
+     "spotifyWebCookies": "COOKIES_FROM_SPOTIFY_WEB_PLAYER"
    }
    ```
+   - If you don't want to use a specific feature, you can leave its API key as the example value or remove it
+   - The app will automatically disable features for which valid API keys aren't provided
    - You can adjust the `monitorInterval` value (in milliseconds) to change how often the app checks what's playing
-   - The `geniusApiKey` is optional but recommended for better lyrics search results
-   - The `openAiApiKey` is optional but enables the age appropriateness evaluation feature
 
-5. **Install dependencies**:
+5. **Get Spotify Web Cookies (Optional but recommended for best lyrics/transcript retrieval)**:
+   - Log in to [Spotify Web Player](https://open.spotify.com/) in your browser
+   - Open developer tools (F12 or right-click > Inspect)
+   - Go to the Console tab and type `document.cookie` and press Enter
+   - Copy the entire cookie string and paste it into your config.json for the `spotifyWebCookies` value
+   - Without these cookies, direct lyrics retrieval from Spotify won't work
+
+6. **Install dependencies**:
    ```bash
    npm install
    ```
 
-6. **Run the application**:
+7. **Run the application**:
    ```bash
    npm start
    ```
-   - This will start the server and automatically open the login page in your browser
-   - Alternatively, navigate to `http://localhost:8888/login` in your browser
+   - This will start the server at http://localhost:8888 using `config.json`
+   - Alternatively, run with a specific config file:
+     ```bash
+     node app.js your-config.json
+     ```
 
-7. **Authorize your Spotify account**:
-   - Log in with your Spotify credentials
+8. **Authorize your Spotify account**:
+   - Open http://localhost:8888 in your browser
+   - **IMPORTANT**: Use the same browser where you are already logged into Spotify
+   - Log in with your Spotify credentials when prompted
    - Allow the requested permissions
    - You'll be redirected back to the application
 
@@ -90,8 +155,8 @@ To monitor different Spotify accounts:
 - Monitors currently playing tracks at regular intervals
 - Automatically refreshes access tokens
 - Displays track information including name, artist, album, and playback progress
-- Shows lyrics for currently playing tracks using the Genius API
-- Evaluates age appropriateness of content using OpenAI (when configured)
+- Shows lyrics for currently playing tracks (requires Genius API key or Spotify Web Cookies)
+- Evaluates age appropriateness of content (requires OpenAI API key)
 - Supports monitoring different accounts using different config files
 
 ## Troubleshooting
@@ -100,3 +165,6 @@ To monitor different Spotify accounts:
 - If the callback fails, verify that you've correctly set up the Redirect URI in your Spotify Developer Dashboard
 - If you need to authenticate again, visit `http://localhost:8888/login` in your browser
 - If age evaluation isn't working, check that you've provided a valid OpenAI API key in your config file
+- If lyrics aren't showing up, verify your Genius API key or Spotify Web Cookies are correct
+- For puppeteer issues on Linux, ensure you've installed the required dependencies: `sudo apt-get install -y libgbm1`
+- Make sure you're using the same browser for the app where you're already logged into Spotify

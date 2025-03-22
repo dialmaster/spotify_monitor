@@ -33,27 +33,58 @@ const loadConfig = (configPath) => {
 const configPath = process.argv[2] || 'config.json';
 const config = loadConfig(configPath);
 
+// Helper function to check if a config value is a placeholder from the example file
+const isPlaceholderValue = (value) => {
+  const placeholders = [
+    'YOUR_SPOTIFY_CLIENT_ID',
+    'YOUR_SPOTIFY_CLIENT_SECRET',
+    'YOUR_GENIUS_API_KEY',
+    'YOUR_OPENAI_API_KEY',
+    'PASTE_YOUR_COOKIES_HERE',
+    'COOKIES_FROM_SPOTIFY_WEB_PLAYER'
+  ];
+  return placeholders.includes(value);
+};
+
 // Set up configuration from the loaded file
 const CLIENT_ID = config.clientId;
 const CLIENT_SECRET = config.clientSecret;
 const REDIRECT_URI = config.redirectUri || 'http://localhost:8888/callback';
 const MONITOR_INTERVAL = config.monitorInterval || 30000; // Default 30 seconds
 const PORT = config.port || 8888;
-// Ensure the Genius API key is a string or undefined
-const GENIUS_API_KEY = typeof config.geniusApiKey === 'string' ? config.geniusApiKey : undefined;
-// OpenAI API key
-const OPENAI_API_KEY = typeof config.openAiApiKey === 'string' ? config.openAiApiKey : undefined;
+
+// Ensure the Genius API key is a valid string or undefined
+const GENIUS_API_KEY = typeof config.geniusApiKey === 'string' && !isPlaceholderValue(config.geniusApiKey)
+  ? config.geniusApiKey
+  : undefined;
+
+// OpenAI API key - check for valid value
+const OPENAI_API_KEY = typeof config.openAiApiKey === 'string' && !isPlaceholderValue(config.openAiApiKey)
+  ? config.openAiApiKey
+  : undefined;
+
 // Age evaluation configuration
 const AGE_EVALUATION_CONFIG = config.ageEvaluation || { listenerAge: 13, customInstructions: "" };
-// Spotify web cookies for authenticated requests
-const SPOTIFY_WEB_COOKIES = typeof config.spotifyWebCookies === 'string' ? config.spotifyWebCookies : '';
+
+// Spotify web cookies for authenticated requests - check for valid value
+const SPOTIFY_WEB_COOKIES = typeof config.spotifyWebCookies === 'string' &&
+                           !isPlaceholderValue(config.spotifyWebCookies) &&
+                           config.spotifyWebCookies.length > 10
+  ? config.spotifyWebCookies
+  : '';
 
 // Initialize OpenAI if API key is available
 let openai = null;
 if (OPENAI_API_KEY) {
-  openai = new OpenAI({
-    apiKey: OPENAI_API_KEY
-  });
+  try {
+    openai = new OpenAI({
+      apiKey: OPENAI_API_KEY
+    });
+    console.log('OpenAI initialized successfully');
+  } catch (error) {
+    console.error('Error initializing OpenAI:', error.message);
+    console.log('Age evaluation feature will be disabled');
+  }
 }
 
 // Generate random string for state
@@ -444,7 +475,11 @@ const getSpotifyLyrics = async (trackUrl) => {
 
     // Check if we have Spotify web cookies configured
     if (!SPOTIFY_WEB_COOKIES) {
-      console.log('No Spotify web cookies configured, cannot fetch lyrics from Spotify web');
+      console.log('No valid Spotify web cookies configured. To enable this feature:');
+      console.log('1. Log in to open.spotify.com in your browser');
+      console.log('2. Get cookies using browser developer tools (F12 > Console > type document.cookie)');
+      console.log('3. Add them to your config.json file');
+      console.log('Falling back to alternative lyrics sources...');
       return null;
     }
 
@@ -576,7 +611,10 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
 
     // Check if we have Spotify web cookies configured
     if (!SPOTIFY_WEB_COOKIES) {
-      console.log('No Spotify web cookies configured, cannot fetch podcast transcript from Spotify web');
+      console.log('No valid Spotify web cookies configured. To enable podcast transcripts:');
+      console.log('1. Log in to open.spotify.com in your browser');
+      console.log('2. Get cookies using browser developer tools (F12 > Console > type document.cookie)');
+      console.log('3. Add them to your config.json file');
       return null;
     }
 
@@ -711,29 +749,6 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
   }
 };
 
-// Function to get lyrics from Spotify API directly
-const getSpotifyApiLyrics = async (trackId) => {
-  try {
-    console.log(`Attempting to get lyrics for track ID: ${trackId}`);
-
-    // Check if we have Spotify web cookies configured
-    if (!SPOTIFY_WEB_COOKIES) {
-      console.log('No Spotify web cookies configured, cannot fetch lyrics from Spotify');
-      return null;
-    }
-
-    // Since there is no actual Spotify lyrics API endpoint,
-    // we'll use the Puppeteer implementation with the track URL
-    const trackUrl = `https://open.spotify.com/track/${trackId}`;
-
-    // Use our Puppeteer implementation
-    return await getSpotifyLyrics(trackUrl);
-  } catch (error) {
-    console.error('Error getting lyrics:', error.message);
-    return null;
-  }
-};
-
 // API endpoint to fetch lyrics for a track
 app.get('/api/lyrics', async (req, res) => {
   try {
@@ -808,10 +823,35 @@ app.get('/api/lyrics', async (req, res) => {
     // Fall back to Genius if Spotify methods failed or weren't attempted
     console.log(`Using Genius API key: ${GENIUS_API_KEY ? 'Yes (configured)' : 'No (falling back to scraping)'}`);
 
-    // Initialize Genius client exactly as shown in docs
-    const geniusClient = new Genius.Client(GENIUS_API_KEY);
+    // Without Genius API key, we can't perform lyrics search
+    if (!GENIUS_API_KEY) {
+      console.log('No Genius API key configured.');
 
+      // If we also don't have Spotify web cookies, we can't get lyrics at all
+      if (!SPOTIFY_WEB_COOKIES) {
+        console.log('No Spotify web cookies configured either.');
+        console.log('To enable lyrics fetching:');
+        console.log('1. Add a Genius API key to your config.json, or');
+        console.log('2. Add Spotify web cookies to your config.json');
+
+        return res.json({
+          lyrics: null,
+          error: 'No lyrics sources available. Configure either Genius API key or Spotify cookies.',
+          suggestion: 'See config.json.example for setup instructions'
+        });
+      }
+
+      // If we already tried Spotify and it failed, just return no lyrics
+      return res.json({
+        lyrics: null,
+        error: 'No lyrics found'
+      });
+    }
+
+    // Initialize Genius client exactly as shown in docs
     try {
+      const geniusClient = new Genius.Client(GENIUS_API_KEY);
+
       // Search for the song
       const searches = await geniusClient.songs.search(`${title} ${artist}`);
 
@@ -840,7 +880,11 @@ app.get('/api/lyrics', async (req, res) => {
       });
     } catch (searchError) {
       console.error('Genius search/lyrics error:', searchError.message);
-      return res.json({ lyrics: null, error: searchError.message });
+      return res.json({
+        lyrics: null,
+        error: searchError.message,
+        suggestion: 'Check your Genius API key or try configuring Spotify web cookies'
+      });
     }
   } catch (error) {
     console.error('Lyrics API error:', error.message);
@@ -867,7 +911,8 @@ app.post('/api/age-evaluation', async (req, res) => {
     if (!openai) {
       return res.status(503).json({
         error: 'OpenAI API not configured',
-        message: 'Please add an OpenAI API key to your config file'
+        message: 'Age evaluation requires an OpenAI API key. Please add a valid key to your config file.',
+        suggestion: 'You can get an API key at https://platform.openai.com/api-keys'
       });
     }
 
@@ -1029,9 +1074,9 @@ app.get('/cookies-help', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Using config file: ${configPath}`);
-  console.log(`Genius API key configured: ${GENIUS_API_KEY ? 'Yes' : 'No'}`);
-  console.log(`OpenAI API key configured: ${OPENAI_API_KEY ? 'Yes' : 'No'}`);
-  console.log(`Spotify Web cookies configured: ${SPOTIFY_WEB_COOKIES ? 'Yes' : 'No'}`);
+  console.log(`Genius API key configured: ${GENIUS_API_KEY ? 'Yes' : 'No (lyrics functionality may be limited)'}`);
+  console.log(`OpenAI API key configured: ${OPENAI_API_KEY ? 'Yes' : 'No (age evaluation disabled)'}`);
+  console.log(`Spotify Web cookies configured: ${SPOTIFY_WEB_COOKIES ? 'Yes' : 'No (Spotify lyrics/transcripts disabled)'}`);
   console.log(`Age evaluation configured for listener age: ${AGE_EVALUATION_CONFIG.listenerAge}`);
   if (AGE_EVALUATION_CONFIG.customInstructions) {
     console.log(`Custom age evaluation instructions: "${AGE_EVALUATION_CONFIG.customInstructions}"`);
