@@ -267,3 +267,42 @@ h3 {
     margin-bottom: 0.5rem;
   }
 }
+
+#lyrics-container {
+  margin-top: 20px;
+  border-top: 1px solid #333;
+  padding-top: 15px;
+}
+
+#lyrics-content {
+  white-space: pre-line;
+  line-height: 1.5;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 15px;
+  background-color: #222;
+  border-radius: 5px;
+  margin-top: 10px;
+  color: #ddd;
+  font-size: 0.95rem;
+}
+
+#lyrics-source {
+  margin-top: 10px;
+  font-size: 0.9em;
+}
+
+#lyrics-source a {
+  color: #1DB954;
+  text-decoration: none;
+}
+
+#lyrics-source a:hover {
+  text-decoration: underline;
+}
+
+#lyrics-loading, #lyrics-not-found {
+  padding: 10px;
+  font-style: italic;
+  color: #b3b3b3;
+}

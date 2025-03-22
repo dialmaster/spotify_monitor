@@ -18,6 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentTimeEl = document.getElementById('current-time');
   const totalTimeEl = document.getElementById('total-time');
 
+  // Lyrics Elements
+  const lyricsContainerEl = document.getElementById('lyrics-container');
+  const lyricsLoadingEl = document.getElementById('lyrics-loading');
+  const lyricsContentEl = document.getElementById('lyrics-content');
+  const lyricsNotFoundEl = document.getElementById('lyrics-not-found');
+  const lyricsSourceEl = document.getElementById('lyrics-source');
+  const lyricsSourceLinkEl = document.getElementById('lyrics-source-link');
+
   // Podcast Elements
   const podcastArtEl = document.getElementById('podcast-art');
   const podcastNameEl = document.getElementById('podcast-name');
@@ -32,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentData = null;
   let updateInterval = null;
   let historyRefreshInterval = null;
+  // Lyrics cache to avoid re-fetching
+  const lyricsCache = new Map();
 
   // Format time from milliseconds to MM:SS
   const formatTime = (ms) => {
@@ -46,6 +56,84 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!dateString) return 'Unknown date';
     const date = new Date(dateString);
     return date.toLocaleString();
+  };
+
+  // Fetch and display lyrics for a track
+  const fetchAndDisplayLyrics = async (trackName, artistName) => {
+    try {
+      // Reset lyrics UI
+      lyricsContainerEl.classList.remove('hidden');
+      lyricsLoadingEl.classList.remove('hidden');
+      lyricsContentEl.classList.add('hidden');
+      lyricsNotFoundEl.classList.add('hidden');
+      lyricsSourceEl.classList.add('hidden');
+
+      // Create a cache key from track name and artist
+      const cacheKey = `${trackName}:::${artistName}`;
+
+      // Check if we already have lyrics for this track in cache
+      if (lyricsCache.has(cacheKey)) {
+        console.log(`Using cached lyrics for "${trackName}" by ${artistName}`);
+        const cachedData = lyricsCache.get(cacheKey);
+        displayLyrics(cachedData);
+        return;
+      }
+
+      // Limit cache size (keep no more than 50 entries)
+      if (lyricsCache.size >= 50) {
+        // Get the oldest key and delete it
+        const oldestKey = lyricsCache.keys().next().value;
+        lyricsCache.delete(oldestKey);
+        console.log('Lyrics cache full, removed oldest entry');
+      }
+
+      console.log(`Requesting lyrics for "${trackName}" by ${artistName}`);
+
+      // Fetch lyrics from the API
+      const response = await fetch(`/api/lyrics?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}`);
+
+      if (!response.ok) {
+        throw new Error(`Error fetching lyrics: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Lyrics API response:', data);
+
+      // Store in cache even if no lyrics were found (to avoid re-fetching)
+      lyricsCache.set(cacheKey, data);
+
+      // Display the lyrics
+      displayLyrics(data);
+    } catch (error) {
+      console.error('Error fetching lyrics:', error);
+      lyricsLoadingEl.classList.add('hidden');
+      lyricsNotFoundEl.classList.remove('hidden');
+    }
+  };
+
+  // Helper function to display lyrics
+  const displayLyrics = (data) => {
+    // Hide loading
+    lyricsLoadingEl.classList.add('hidden');
+
+    // If lyrics were found
+    if (data.lyrics) {
+      // Format and display lyrics
+      lyricsContentEl.innerHTML = data.lyrics.replace(/\n/g, '<br>');
+      lyricsContentEl.classList.remove('hidden');
+
+      // Set up source link
+      if (data.url) {
+        lyricsSourceLinkEl.href = data.url;
+        lyricsSourceEl.classList.remove('hidden');
+      }
+    } else {
+      // Show not found message
+      lyricsNotFoundEl.classList.remove('hidden');
+      if (data.error) {
+        console.error('Lyrics error:', data.error);
+      }
+    }
   };
 
   // Update progress bar
@@ -75,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
     notPlayingEl.classList.add('hidden');
     trackContainerEl.classList.add('hidden');
     podcastContainerEl.classList.add('hidden');
+    lyricsContainerEl.classList.add('hidden');
 
     currentData = data;
 
@@ -104,6 +193,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Show track container
       trackContainerEl.classList.remove('hidden');
+
+      // Fetch lyrics for the track
+      fetchAndDisplayLyrics(data.item.name, data.item.artists[0].name);
     }
     // If it's a podcast
     else if (data.type === 'episode') {
@@ -265,4 +357,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Refresh history data every 5 minutes (300,000 ms)
   historyRefreshInterval = setInterval(fetchRecentlyPlayed, 300000);
+
+  // Clear cache on page unload
+  window.addEventListener('beforeunload', () => {
+    lyricsCache.clear();
+    console.log('Lyrics cache cleared');
+  });
 });

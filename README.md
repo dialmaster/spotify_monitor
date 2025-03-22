@@ -12,31 +12,41 @@ A simple Node.js application to monitor what's currently playing on a Spotify ac
    - For "Redirect URI", enter: `http://localhost:8888/callback`
    - Save your app and note your Client ID and Client Secret
 
-2. **Configure the application**:
+2. **Get a Genius API Key (Optional)**:
+   - Go to the [Genius API Clients page](https://genius.com/api-clients)
+   - Sign in or create an account
+   - Click "New API Client"
+   - Fill in the required information, include "http://localhost:8888" as the App Website URL
+   - After creating the client, you'll get a Client ID, Client Secret, and Client Access Token
+   - Copy the Client Access Token - this is your Genius API key
+
+3. **Configure the application**:
    - Edit `config.json` and add your Spotify Client ID and Client Secret:
    ```json
    {
      "clientId": "YOUR_SPOTIFY_CLIENT_ID",
      "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
      "redirectUri": "http://localhost:8888/callback",
-     "monitorInterval": 30000
+     "monitorInterval": 30000,
+     "geniusApiKey": "YOUR_GENIUS_API_KEY"  // Optional
    }
    ```
    - You can adjust the `monitorInterval` value (in milliseconds) to change how often the app checks what's playing
+   - The `geniusApiKey` is optional but recommended for better lyrics search results
 
-3. **Install dependencies**:
+4. **Install dependencies**:
    ```bash
    npm install
    ```
 
-4. **Run the application**:
+5. **Run the application**:
    ```bash
    npm start
    ```
    - This will start the server and automatically open the login page in your browser
    - Alternatively, navigate to `http://localhost:8888/login` in your browser
 
-5. **Authorize your Spotify account**:
+6. **Authorize your Spotify account**:
    - Log in with your Spotify credentials
    - Allow the requested permissions
    - You'll be redirected back to the application
@@ -71,6 +81,7 @@ To monitor different Spotify accounts:
 - Monitors currently playing tracks at regular intervals
 - Automatically refreshes access tokens
 - Displays track information including name, artist, album, and playback progress
+- Shows lyrics for currently playing tracks using the Genius API
 - Supports monitoring different accounts using different config files
 
 ## Troubleshooting

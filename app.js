@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const querystring = require('querystring');
 const cookieParser = require('cookie-parser');
+const Genius = require('genius-lyrics');
 
 const app = express();
 
@@ -36,6 +37,8 @@ const CLIENT_SECRET = config.clientSecret;
 const REDIRECT_URI = config.redirectUri || 'http://localhost:8888/callback';
 const MONITOR_INTERVAL = config.monitorInterval || 30000; // Default 30 seconds
 const PORT = config.port || 8888;
+// Ensure the Genius API key is a string or undefined
+const GENIUS_API_KEY = typeof config.geniusApiKey === 'string' ? config.geniusApiKey : undefined;
 
 // Generate random string for state
 const generateRandomString = (length) => {
@@ -415,9 +418,59 @@ app.get('/api/recently-played', async (req, res) => {
   }
 });
 
+// API endpoint to fetch lyrics for a track
+app.get('/api/lyrics', async (req, res) => {
+  try {
+    const { title, artist } = req.query;
+
+    if (!title || !artist) {
+      return res.status(400).json({ error: 'Missing required parameters: title and artist' });
+    }
+
+    console.log(`Fetching lyrics for "${title}" by ${artist}`);
+    console.log(`Using Genius API key: ${GENIUS_API_KEY ? 'Yes (configured)' : 'No (falling back to scraping)'}`);
+
+    // Initialize Genius client exactly as shown in docs
+    const geniusClient = new Genius.Client(GENIUS_API_KEY);
+
+    try {
+      // Search for the song
+      const searches = await geniusClient.songs.search(`${title} ${artist}`);
+
+      // If no results found
+      if (!searches || searches.length === 0) {
+        console.log('No lyrics found');
+        return res.json({ lyrics: null });
+      }
+
+      // Get the first search result
+      const song = searches[0];
+      console.log(`Found song: ${song.title} by ${song.artist.name}`);
+
+      // Fetch the lyrics
+      const lyrics = await song.lyrics();
+
+      res.json({
+        lyrics,
+        title: song.title,
+        artist: song.artist.name,
+        image: song.image,
+        url: song.url
+      });
+    } catch (searchError) {
+      console.error('Genius search/lyrics error:', searchError.message);
+      return res.json({ lyrics: null, error: searchError.message });
+    }
+  } catch (error) {
+    console.error('Lyrics API error:', error.message);
+    res.status(500).json({ error: 'Error fetching lyrics' });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Using config file: ${configPath}`);
+  console.log(`Genius API key configured: ${GENIUS_API_KEY ? 'Yes' : 'No'}`);
   console.log(`To authorize Spotify, open http://localhost:${PORT} in your browser`);
 });
