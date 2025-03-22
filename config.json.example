@@ -8,6 +8,6 @@
   "openAiApiKey": "YOUR_OPENAI_API_KEY",
   "ageEvaluation": {
     "listenerAge": 13,
-    "customInstructions": "Be cautious about explicit language and sexual content, but more lenient on themes of mild violence."
+    "customInstructions": "Please be lenient on the age rating, keeping in mind that we generally want to allow content that would be heard on most mainstream radio stations. Be more strict if there is explicit sexual content or discussion of drugs. If the lyrics include the work 'fuck', it should be rated as 18+."
   }
 }
