@@ -25,6 +25,7 @@ header {
   margin-bottom: 2rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid #333;
+  text-align: center;
 }
 
 h1 {
@@ -169,22 +170,6 @@ h3 {
   max-width: 500px;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  #track-container, #podcast-container {
-    flex-direction: column;
-  }
-
-  .art-container {
-    margin-right: 0;
-    margin-bottom: 1.5rem;
-  }
-
-  .art-container img {
-    max-width: 100%;
-  }
-}
-
 /* Recently Played History Section */
 #history-container {
   width: 100%;
@@ -257,17 +242,6 @@ h3 {
   font-size: 0.8rem;
 }
 
-/* For mobile screens */
-@media (max-width: 480px) {
-  .history-item {
-    flex-direction: column;
-  }
-
-  .history-art {
-    margin-bottom: 0.5rem;
-  }
-}
-
 #lyrics-container {
   margin-top: 20px;
   border-top: 1px solid #333;
@@ -305,4 +279,185 @@ h3 {
   padding: 10px;
   font-style: italic;
   color: #b3b3b3;
+}
+
+/* Enhanced Responsive Design */
+@media (max-width: 1024px) {
+  .container {
+    padding: 1.5rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.6rem;
+  }
+
+  h3 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  #track-container, #podcast-container {
+    flex-direction: column;
+    padding: 1.5rem;
+  }
+
+  .art-container {
+    margin-right: 0;
+    margin-bottom: 1.5rem;
+    min-width: 100%;
+  }
+
+  .art-container img {
+    max-width: 100%;
+    margin: 0 auto;
+    display: block;
+  }
+
+  .info-container {
+    min-width: 100%;
+  }
+
+  #history-container {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .container {
+    padding: 0.75rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  h2 {
+    font-size: 1.4rem;
+  }
+
+  h3 {
+    font-size: 1.2rem;
+  }
+
+  .login-container {
+    padding: 1.5rem;
+  }
+
+  .login-container p {
+    font-size: 1rem;
+  }
+
+  .login-button {
+    padding: 10px 24px;
+    font-size: 0.9rem;
+  }
+
+  #track-container, #podcast-container {
+    padding: 1rem;
+  }
+
+  .art-container {
+    margin-bottom: 1rem;
+  }
+
+  .art-container img {
+    max-width: 70%;
+    max-height: 180px;
+    object-fit: contain;
+  }
+
+  .progress-container {
+    margin-top: 1.5rem;
+  }
+
+  #not-playing {
+    padding: 2rem;
+  }
+
+  #history-container {
+    margin-top: 2rem;
+    padding: 1rem;
+  }
+
+  .history-title {
+    font-size: 1rem;
+  }
+
+  .description {
+    max-height: 120px;
+    padding: 0.75rem;
+  }
+
+  #lyrics-content {
+    padding: 10px;
+    max-height: 200px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .history-item {
+    flex-direction: column;
+  }
+
+  .history-art {
+    margin-bottom: 0.75rem;
+    width: 50px;
+    height: 50px;
+  }
+
+  .art-container img {
+    max-width: 60%;
+    max-height: 150px;
+  }
+
+  .time-display {
+    font-size: 0.8rem;
+  }
+
+  .age-rating {
+    font-size: 1rem;
+  }
+
+  .age-level {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+  }
+
+  .age-explanation {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .container {
+    padding: 0.5rem;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+
+  #track-container, #podcast-container, #history-container {
+    padding: 0.75rem;
+  }
+
+  .art-container img {
+    max-width: 50%;
+    max-height: 130px;
+  }
+
+  .login-button {
+    padding: 8px 20px;
+    font-size: 0.85rem;
+  }
 }
