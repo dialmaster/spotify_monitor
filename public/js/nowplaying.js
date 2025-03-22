@@ -27,6 +27,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const lyricsSourceEl = document.getElementById('lyrics-source');
   const lyricsSourceLinkEl = document.getElementById('lyrics-source-link');
 
+  // Podcast Transcript Elements
+  const podcastTranscriptContainerEl = document.getElementById('podcast-transcript-container');
+  const podcastTranscriptLoadingEl = document.getElementById('podcast-transcript-loading');
+  const podcastTranscriptContentEl = document.getElementById('podcast-transcript-content');
+  const podcastTranscriptNotFoundEl = document.getElementById('podcast-transcript-not-found');
+  const podcastTranscriptSourceEl = document.getElementById('podcast-transcript-source');
+  const podcastTranscriptSourceLinkEl = document.getElementById('podcast-transcript-source-link');
+
   // Track Age Evaluation Elements
   const trackAgeContainerEl = document.getElementById('track-age-container');
   const trackAgeLoadingEl = document.getElementById('track-age-loading');
@@ -139,13 +147,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fetch and display transcript for a podcast
   const fetchAndDisplayTranscript = async (episodeName, episodeUrl) => {
     try {
-      // Reset lyrics UI (we'll use the same container for transcripts)
-      lyricsContainerEl.classList.remove('hidden');
-      lyricsLoadingEl.classList.remove('hidden');
-      lyricsLoadingEl.textContent = `Attempting to fetch transcript for "${episodeName}"...`;
-      lyricsContentEl.classList.add('hidden');
-      lyricsNotFoundEl.classList.add('hidden');
-      lyricsSourceEl.classList.add('hidden');
+      // Reset transcript UI
+      podcastTranscriptContainerEl.classList.remove('hidden');
+      podcastTranscriptLoadingEl.classList.remove('hidden');
+      podcastTranscriptLoadingEl.textContent = `Attempting to fetch transcript for "${episodeName}"...`;
+      podcastTranscriptContentEl.classList.add('hidden');
+      podcastTranscriptNotFoundEl.classList.add('hidden');
+      podcastTranscriptSourceEl.classList.add('hidden');
 
       // Create a cache key from episode name
       const cacheKey = `podcast:::${episodeName}`;
@@ -154,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (lyricsCache.has(cacheKey)) {
         console.log(`Using cached transcript for "${episodeName}"`);
         const cachedData = lyricsCache.get(cacheKey);
-        displayLyrics(cachedData); // We can reuse the displayLyrics function
+        displayTranscript(cachedData); // Use the dedicated transcript display function
         return;
       }
 
@@ -171,8 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Verify we have the Spotify URL
       if (!episodeUrl) {
         console.error('No Spotify URL available for this podcast episode');
-        lyricsLoadingEl.classList.add('hidden');
-        lyricsNotFoundEl.classList.remove('hidden');
+        podcastTranscriptLoadingEl.classList.add('hidden');
+        podcastTranscriptNotFoundEl.classList.remove('hidden');
         // Since we couldn't get transcript, pass null to age evaluation
         if (currentData && currentData.item) {
           fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null, null, null);
@@ -196,16 +204,56 @@ document.addEventListener('DOMContentLoaded', () => {
       lyricsCache.set(cacheKey, data);
 
       // Display the transcript
-      displayLyrics(data); // We can reuse the displayLyrics function
+      displayTranscript(data);
 
-      // We don't call fetchAndDisplayAgeEvaluation here because it will be called by displayLyrics
+      // We don't call fetchAndDisplayAgeEvaluation here because it will be called by displayTranscript
     } catch (error) {
       console.error('Error fetching podcast transcript:', error);
-      lyricsLoadingEl.classList.add('hidden');
-      lyricsNotFoundEl.classList.remove('hidden');
-      lyricsNotFoundEl.textContent = 'No transcript available for this podcast episode';
+      podcastTranscriptLoadingEl.classList.add('hidden');
+      podcastTranscriptNotFoundEl.classList.remove('hidden');
+      podcastTranscriptNotFoundEl.textContent = 'No transcript available for this podcast episode';
 
       // Even if transcript fetch fails, we should still do age evaluation
+      if (currentData && currentData.item) {
+        fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null, null, null);
+      }
+    }
+  };
+
+  // Helper function to display podcast transcript
+  const displayTranscript = (data) => {
+    // Hide loading
+    podcastTranscriptLoadingEl.classList.add('hidden');
+
+    // If transcript was found
+    if (data.lyrics) {
+      // Format and display transcript
+      podcastTranscriptContentEl.innerHTML = data.lyrics.replace(/\n/g, '<br>');
+      podcastTranscriptContentEl.classList.remove('hidden');
+
+      // Set up source link
+      if (data.url) {
+        podcastTranscriptSourceLinkEl.href = data.url;
+        podcastTranscriptSourceLinkEl.textContent = 'Source: Spotify Podcast Transcript';
+        podcastTranscriptSourceEl.classList.remove('hidden');
+      }
+
+      // Now that we have transcript, fetch age evaluation
+      if (currentData && currentData.item) {
+        // Use sourceDetail if available for more detailed confidence information
+        const sourceDetail = data.sourceDetail || null;
+        fetchAndDisplayAgeEvaluation(currentData.item, 'episode', data.lyrics, data.source, sourceDetail);
+      }
+    } else {
+      // Show not found message
+      podcastTranscriptNotFoundEl.classList.remove('hidden');
+      podcastTranscriptNotFoundEl.textContent = 'No transcript available for this podcast episode';
+
+      if (data.error) {
+        console.error('Transcript error:', data.error);
+      }
+
+      // Even without transcript, we can still evaluate based on episode info
       if (currentData && currentData.item) {
         fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null, null, null);
       }
@@ -507,8 +555,6 @@ document.addEventListener('DOMContentLoaded', () => {
           lyricsSourceLinkEl.textContent = 'Source: Spotify Web';
         } else if (data.source === 'genius') {
           lyricsSourceLinkEl.textContent = 'Source: Genius';
-        } else if (data.source === 'spotify-podcast-transcript') {
-          lyricsSourceLinkEl.textContent = 'Source: Spotify Podcast Transcript';
         } else {
           lyricsSourceLinkEl.textContent = 'View source';
         }
@@ -517,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Now that we have lyrics, fetch age evaluation
-      if (currentData && currentData.item) {
+      if (currentData && currentData.item && currentData.type === 'track') {
         // Use sourceDetail if available for more detailed confidence information
         const sourceDetail = data.sourceDetail || null;
         fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, data.lyrics, data.source, sourceDetail);
@@ -525,20 +571,14 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       // Show not found message
       lyricsNotFoundEl.classList.remove('hidden');
-
-      // Set appropriate text based on content type
-      if (currentData && currentData.type === 'episode') {
-        lyricsNotFoundEl.textContent = 'No transcript available for this podcast episode';
-      } else {
-        lyricsNotFoundEl.textContent = 'No lyrics found for this track';
-      }
+      lyricsNotFoundEl.textContent = 'No lyrics found for this track';
 
       if (data.error) {
-        console.error('Lyrics/transcript error:', data.error);
+        console.error('Lyrics error:', data.error);
       }
 
       // Even without lyrics, we can still evaluate based on track info
-      if (currentData && currentData.item) {
+      if (currentData && currentData.item && currentData.type === 'track') {
         fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, null, null, null);
       }
     }
@@ -590,6 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
     trackContainerEl.classList.add('hidden');
     podcastContainerEl.classList.add('hidden');
     lyricsContainerEl.classList.add('hidden');
+    podcastTranscriptContainerEl.classList.add('hidden');
 
     // Hide age containers
     if (trackAgeContainerEl) trackAgeContainerEl.classList.add('hidden');

@@ -152,6 +152,46 @@
       gap: 1rem;
     }
 
+    /* Styles for transcripts */
+    #podcast-transcript-container {
+      margin-top: 20px;
+      border-top: 1px solid #333;
+      padding-top: 15px;
+    }
+
+    #podcast-transcript-content {
+      white-space: pre-line;
+      line-height: 1.5;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 15px;
+      background-color: #222;
+      border-radius: 5px;
+      margin-top: 10px;
+      color: #ddd;
+      font-size: 0.95rem;
+    }
+
+    #podcast-transcript-source {
+      margin-top: 10px;
+      font-size: 0.9em;
+    }
+
+    #podcast-transcript-source a {
+      color: #1DB954;
+      text-decoration: none;
+    }
+
+    #podcast-transcript-source a:hover {
+      text-decoration: underline;
+    }
+
+    #podcast-transcript-loading, #podcast-transcript-not-found {
+      padding: 10px;
+      font-style: italic;
+      color: #b3b3b3;
+    }
+
     /* Mobile styles for age rating */
     @media (max-width: 576px) {
       .age-container {
@@ -186,6 +226,13 @@
       .age-explanation {
         font-size: 0.85rem;
         line-height: 1.3;
+      }
+
+      /* Responsive transcript container */
+      #podcast-transcript-content {
+        max-height: 250px;
+        font-size: 0.9rem;
+        padding: 10px;
       }
     }
   </style>
@@ -277,18 +324,33 @@
             </div>
           </div>
 
-          <div id="podcast-age-container" class="age-container hidden">
-            <h3>AI Evaluation</h3>
-            <div id="podcast-age-loading" class="age-loading">Evaluating podcast appropriateness with AI...</div>
-            <div id="podcast-age-content" class="age-content hidden">
-              <div class="age-rating-container">
-                <div class="age-rating" id="podcast-age-rating"></div>
-                <div class="age-level" id="podcast-age-level"></div>
-                <div class="confidence-level" id="podcast-confidence-level"></div>
+          <div class="info-section">
+            <div id="podcast-transcript-container" class="hidden">
+              <h3>Transcript</h3>
+              <div id="podcast-transcript-loading">Attempting to fetch transcript...</div>
+              <div id="podcast-transcript-content" class="hidden"></div>
+              <div id="podcast-transcript-not-found" class="hidden">Transcript not available</div>
+              <div id="podcast-transcript-source" class="hidden">
+                <a id="podcast-transcript-source-link" href="#" target="_blank">View source</a>
               </div>
-              <div class="age-explanation" id="podcast-age-explanation"></div>
+              <div class="transcript-help" style="margin-top: 0.5rem; font-size: 0.8rem;">
+                <a href="/cookies-help" target="_blank">Learn how to set up Spotify cookies for better transcript fetching</a>
+              </div>
             </div>
-            <div id="podcast-age-error" class="age-error hidden">Unable to evaluate content</div>
+
+            <div id="podcast-age-container" class="age-container hidden">
+              <h3>AI Evaluation</h3>
+              <div id="podcast-age-loading" class="age-loading">Evaluating podcast appropriateness with AI...</div>
+              <div id="podcast-age-content" class="age-content hidden">
+                <div class="age-rating-container">
+                  <div class="age-rating" id="podcast-age-rating"></div>
+                  <div class="age-level" id="podcast-age-level"></div>
+                  <div class="confidence-level" id="podcast-confidence-level"></div>
+                </div>
+                <div class="age-explanation" id="podcast-age-explanation"></div>
+              </div>
+              <div id="podcast-age-error" class="age-error hidden">Unable to evaluate content</div>
+            </div>
           </div>
         </div>
       </div>
