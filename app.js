@@ -42,6 +42,8 @@ const PORT = config.port || 8888;
 const GENIUS_API_KEY = typeof config.geniusApiKey === 'string' ? config.geniusApiKey : undefined;
 // OpenAI API key
 const OPENAI_API_KEY = typeof config.openAiApiKey === 'string' ? config.openAiApiKey : undefined;
+// Age evaluation configuration
+const AGE_EVALUATION_CONFIG = config.ageEvaluation || { listenerAge: 13, customInstructions: "" };
 
 // Initialize OpenAI if API key is available
 let openai = null;
@@ -538,7 +540,22 @@ app.get('/api/age-evaluation', async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "You are an assistant that evaluates the age appropriateness of music tracks and podcasts. Provide a clear age recommendation (e.g., 'All ages', '13+', '16+', '18+') and a brief explanation why. Be objective and consider lyrical content, themes, and language. Format your response as JSON with 'ageRating', 'explanation', and 'level' fields. The level field should be 'OK' if the content is appropriate for all ages, 'WARNING' if it's appropriate for late teens and older, and 'BLOCK' if it's appropriate for adults only. DO NOT wrap your response in markdown code blocks."
+          content: `You are an assistant that evaluates the age appropriateness of music tracks and podcasts.
+
+The listener's target age is: ${AGE_EVALUATION_CONFIG.listenerAge} years old.
+
+${AGE_EVALUATION_CONFIG.customInstructions ? `Parent's custom instructions: ${AGE_EVALUATION_CONFIG.customInstructions}` : ''}
+
+Provide a clear age recommendation (e.g., 'All ages', '13+', '16+', '18+') and a brief explanation why.
+Be objective and consider lyrical content, themes, and language.
+
+Format your response as JSON with the following fields:
+- 'ageRating': a clear age recommendation (e.g., 'All ages', '13+', '16+', '18+')
+- 'explanation': brief reasoning for your recommendation
+- 'level': 'OK' if appropriate for the configured listener age, 'WARNING' if borderline for the listener age, 'BLOCK' if NOT appropriate for the listener age.
+
+DO NOT wrap your response in markdown code blocks.`,
+
         },
         {
           role: "user",
@@ -571,10 +588,25 @@ app.get('/api/age-evaluation', async (req, res) => {
       const ageMatch = rawContent.match(/(?:All ages|\d+\+)/i);
       const ageRating = ageMatch ? ageMatch[0] : "Unknown";
 
+      // Determine level based on extracted age and configured listener age
+      let level = 'Unknown';
+      if (ageRating.toLowerCase() === 'all ages') {
+        level = 'OK';
+      } else if (ageRating.match(/\d+\+/)) {
+        const extractedAge = parseInt(ageRating, 10);
+        if (extractedAge <= AGE_EVALUATION_CONFIG.listenerAge) {
+          level = 'OK';
+        } else if (extractedAge <= AGE_EVALUATION_CONFIG.listenerAge + 2) {
+          level = 'WARNING';
+        } else {
+          level = 'BLOCK';
+        }
+      }
+
       response = {
         ageRating: ageRating,
         explanation: rawContent.replace(/```json|```/g, '').trim(),
-        level: 'Unknown'
+        level: level
       };
     }
 
@@ -594,5 +626,9 @@ app.listen(PORT, () => {
   console.log(`Using config file: ${configPath}`);
   console.log(`Genius API key configured: ${GENIUS_API_KEY ? 'Yes' : 'No'}`);
   console.log(`OpenAI API key configured: ${OPENAI_API_KEY ? 'Yes' : 'No'}`);
+  console.log(`Age evaluation configured for listener age: ${AGE_EVALUATION_CONFIG.listenerAge}`);
+  if (AGE_EVALUATION_CONFIG.customInstructions) {
+    console.log(`Custom age evaluation instructions: "${AGE_EVALUATION_CONFIG.customInstructions}"`);
+  }
   console.log(`To authorize Spotify, open http://localhost:${PORT} in your browser`);
 });
