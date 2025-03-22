@@ -20,7 +20,13 @@ A simple Node.js application to monitor what's currently playing on a Spotify ac
    - After creating the client, you'll get a Client ID, Client Secret, and Client Access Token
    - Copy the Client Access Token - this is your Genius API key
 
-3. **Configure the application**:
+3. **Get an OpenAI API Key (Optional)**:
+   - Go to [OpenAI API Keys](https://platform.openai.com/api-keys)
+   - Sign in or create an account
+   - Create a new API key
+   - Copy the API key (it will only be shown once)
+
+4. **Configure the application**:
    - Edit `config.json` and add your Spotify Client ID and Client Secret:
    ```json
    {
@@ -28,25 +34,27 @@ A simple Node.js application to monitor what's currently playing on a Spotify ac
      "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
      "redirectUri": "http://localhost:8888/callback",
      "monitorInterval": 30000,
-     "geniusApiKey": "YOUR_GENIUS_API_KEY"  // Optional
+     "geniusApiKey": "YOUR_GENIUS_API_KEY",  // Optional
+     "openAiApiKey": "YOUR_OPENAI_API_KEY"   // Optional
    }
    ```
    - You can adjust the `monitorInterval` value (in milliseconds) to change how often the app checks what's playing
    - The `geniusApiKey` is optional but recommended for better lyrics search results
+   - The `openAiApiKey` is optional but enables the age appropriateness evaluation feature
 
-4. **Install dependencies**:
+5. **Install dependencies**:
    ```bash
    npm install
    ```
 
-5. **Run the application**:
+6. **Run the application**:
    ```bash
    npm start
    ```
    - This will start the server and automatically open the login page in your browser
    - Alternatively, navigate to `http://localhost:8888/login` in your browser
 
-6. **Authorize your Spotify account**:
+7. **Authorize your Spotify account**:
    - Log in with your Spotify credentials
    - Allow the requested permissions
    - You'll be redirected back to the application
@@ -67,7 +75,8 @@ To monitor different Spotify accounts:
      "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
      "redirectUri": "http://localhost:8889/callback",
      "port": 8889,
-     "monitorInterval": 30000
+     "monitorInterval": 30000,
+     "openAiApiKey": "YOUR_OPENAI_API_KEY"
    }
    ```
    Then run:
@@ -82,6 +91,7 @@ To monitor different Spotify accounts:
 - Automatically refreshes access tokens
 - Displays track information including name, artist, album, and playback progress
 - Shows lyrics for currently playing tracks using the Genius API
+- Evaluates age appropriateness of content using OpenAI (when configured)
 - Supports monitoring different accounts using different config files
 
 ## Troubleshooting
@@ -89,3 +99,4 @@ To monitor different Spotify accounts:
 - If you see authentication errors, ensure your Client ID and Client Secret are correctly entered in the config file
 - If the callback fails, verify that you've correctly set up the Redirect URI in your Spotify Developer Dashboard
 - If you need to authenticate again, visit `http://localhost:8888/login` in your browser
+- If age evaluation isn't working, check that you've provided a valid OpenAI API key in your config file

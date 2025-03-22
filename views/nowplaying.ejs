@@ -5,6 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Now Playing - Spotify Monitor</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Additional styles for age rating */
+    .age-container {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background-color: #f4f4f4;
+    }
+
+    .age-content {
+      margin-top: 0.5rem;
+    }
+
+    .age-rating {
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: #333;
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.3rem;
+      background-color: #eaeaea;
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+
+    .age-explanation {
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: #000000;
+    }
+
+    .age-error {
+      color: #d32f2f;
+      font-style: italic;
+    }
+
+    /* Additional styles for the overall layout */
+    .info-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -38,13 +80,25 @@
               <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
             </div>
           </div>
-          <div id="lyrics-container" class="hidden">
-            <h3>Lyrics</h3>
-            <div id="lyrics-loading">Loading lyrics...</div>
-            <div id="lyrics-content" class="hidden"></div>
-            <div id="lyrics-not-found" class="hidden">Lyrics not found</div>
-            <div id="lyrics-source" class="hidden">
-              <a id="lyrics-source-link" href="#" target="_blank">View on Genius</a>
+          <div class="info-section">
+            <div id="lyrics-container" class="hidden">
+              <h3>Lyrics</h3>
+              <div id="lyrics-loading">Loading lyrics...</div>
+              <div id="lyrics-content" class="hidden"></div>
+              <div id="lyrics-not-found" class="hidden">Lyrics not found</div>
+              <div id="lyrics-source" class="hidden">
+                <a id="lyrics-source-link" href="#" target="_blank">View on Genius</a>
+              </div>
+            </div>
+
+            <div id="track-age-container" class="age-container hidden">
+              <h3>Age Appropriateness</h3>
+              <div id="track-age-loading" class="age-loading">Evaluating content...</div>
+              <div id="track-age-content" class="age-content hidden">
+                <div class="age-rating" id="track-age-rating"></div>
+                <div class="age-explanation" id="track-age-explanation"></div>
+              </div>
+              <div id="track-age-error" class="age-error hidden">Unable to evaluate content</div>
             </div>
           </div>
         </div>
@@ -66,6 +120,16 @@
             <div class="time-display">
               <span id="podcast-current-time">0:00</span> / <span id="podcast-total-time">0:00</span>
             </div>
+          </div>
+
+          <div id="podcast-age-container" class="age-container hidden">
+            <h3>Age Appropriateness</h3>
+            <div id="podcast-age-loading" class="age-loading">Evaluating content...</div>
+            <div id="podcast-age-content" class="age-content hidden">
+              <div class="age-rating" id="podcast-age-rating"></div>
+              <div class="age-explanation" id="podcast-age-explanation"></div>
+            </div>
+            <div id="podcast-age-error" class="age-error hidden">Unable to evaluate content</div>
           </div>
         </div>
       </div>

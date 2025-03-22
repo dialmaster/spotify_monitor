@@ -5,6 +5,7 @@ const path = require('path');
 const querystring = require('querystring');
 const cookieParser = require('cookie-parser');
 const Genius = require('genius-lyrics');
+const OpenAI = require('openai');
 
 const app = express();
 
@@ -39,6 +40,16 @@ const MONITOR_INTERVAL = config.monitorInterval || 30000; // Default 30 seconds
 const PORT = config.port || 8888;
 // Ensure the Genius API key is a string or undefined
 const GENIUS_API_KEY = typeof config.geniusApiKey === 'string' ? config.geniusApiKey : undefined;
+// OpenAI API key
+const OPENAI_API_KEY = typeof config.openAiApiKey === 'string' ? config.openAiApiKey : undefined;
+
+// Initialize OpenAI if API key is available
+let openai = null;
+if (OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: OPENAI_API_KEY
+  });
+}
 
 // Generate random string for state
 const generateRandomString = (length) => {
@@ -62,6 +73,9 @@ let currentPlayback = null;
 // Store play history
 let playHistory = null;
 let lastHistoryFetch = 0;
+
+// Store age evaluation cache
+const ageEvaluationCache = new Map();
 
 // Function to check if token is expired
 const isTokenExpired = () => {
@@ -467,10 +481,117 @@ app.get('/api/lyrics', async (req, res) => {
   }
 });
 
+// API endpoint to get age evaluation for a track or podcast
+app.get('/api/age-evaluation', async (req, res) => {
+  try {
+    const { id, type, title, artist, lyrics, description } = req.query;
+
+    if (!id || !type || !title) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    // Check if OpenAI is configured
+    if (!openai) {
+      return res.status(503).json({
+        error: 'OpenAI API not configured',
+        message: 'Please add an OpenAI API key to your config file'
+      });
+    }
+
+    // Create cache key
+    const cacheKey = id;
+
+    // Check cache first
+    if (ageEvaluationCache.has(cacheKey)) {
+      console.log(`Using cached age evaluation for "${title}"`);
+      return res.json(ageEvaluationCache.get(cacheKey));
+    }
+
+    // Limit cache size (keep no more than 100 entries)
+    if (ageEvaluationCache.size >= 100) {
+      // Get the oldest key and delete it
+      const oldestKey = ageEvaluationCache.keys().next().value;
+      ageEvaluationCache.delete(oldestKey);
+      console.log('Age evaluation cache full, removed oldest entry');
+    }
+
+    // Prepare content for evaluation
+    let content = '';
+    if (type === 'track') {
+      content = `Track: ${title}\nArtist: ${artist || 'Unknown'}\n`;
+      if (lyrics) {
+        content += `\nLyrics:\n${lyrics}`;
+      }
+    } else if (type === 'episode') {
+      content = `Podcast: ${title}\n`;
+      if (description) {
+        content += `\nDescription:\n${description}`;
+      }
+    }
+
+    console.log(`Requesting age evaluation for "${title}"`);
+
+    // Make OpenAI API request
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: "You are an assistant that evaluates the age appropriateness of music tracks and podcasts. Provide a clear age recommendation (e.g., 'All ages', '13+', '16+', '18+') and a brief explanation why. Be objective and consider lyrical content, themes, and language. Format your response as JSON with 'ageRating' and 'explanation' fields. DO NOT wrap your response in markdown code blocks."
+        },
+        {
+          role: "user",
+          content: content
+        }
+      ]
+    });
+
+    // Get raw content from completion
+    let rawContent = completion.choices[0].message.content;
+
+    // Log the raw response from OpenAI
+    console.log('Raw OpenAI response:', rawContent);
+
+    // Remove markdown code blocks if present
+    let cleanedContent = rawContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    // Also handle the case where it just uses ``` without specifying the language
+    cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+
+    console.log('Cleaned content for parsing:', cleanedContent);
+
+    let response;
+    try {
+      // Try to parse response as JSON
+      response = JSON.parse(cleanedContent);
+    } catch (e) {
+      console.log('JSON parse error, using regex fallback:', e.message);
+
+      // Extract age rating with regex (looking for patterns like "13+", "All ages", etc.)
+      const ageMatch = rawContent.match(/(?:All ages|\d+\+)/i);
+      const ageRating = ageMatch ? ageMatch[0] : "Unknown";
+
+      response = {
+        ageRating: ageRating,
+        explanation: rawContent.replace(/```json|```/g, '').trim(),
+      };
+    }
+
+    // Store in cache
+    ageEvaluationCache.set(cacheKey, response);
+
+    res.json(response);
+  } catch (error) {
+    console.error('Age evaluation API error:', error.message);
+    res.status(500).json({ error: 'Error evaluating content age appropriateness' });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Using config file: ${configPath}`);
   console.log(`Genius API key configured: ${GENIUS_API_KEY ? 'Yes' : 'No'}`);
+  console.log(`OpenAI API key configured: ${OPENAI_API_KEY ? 'Yes' : 'No'}`);
   console.log(`To authorize Spotify, open http://localhost:${PORT} in your browser`);
 });

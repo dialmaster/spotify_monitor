@@ -26,6 +26,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const lyricsSourceEl = document.getElementById('lyrics-source');
   const lyricsSourceLinkEl = document.getElementById('lyrics-source-link');
 
+  // Track Age Evaluation Elements
+  const trackAgeContainerEl = document.getElementById('track-age-container');
+  const trackAgeLoadingEl = document.getElementById('track-age-loading');
+  const trackAgeContentEl = document.getElementById('track-age-content');
+  const trackAgeRatingEl = document.getElementById('track-age-rating');
+  const trackAgeExplanationEl = document.getElementById('track-age-explanation');
+  const trackAgeErrorEl = document.getElementById('track-age-error');
+
+  // Podcast Age Evaluation Elements
+  const podcastAgeContainerEl = document.getElementById('podcast-age-container');
+  const podcastAgeLoadingEl = document.getElementById('podcast-age-loading');
+  const podcastAgeContentEl = document.getElementById('podcast-age-content');
+  const podcastAgeRatingEl = document.getElementById('podcast-age-rating');
+  const podcastAgeExplanationEl = document.getElementById('podcast-age-explanation');
+  const podcastAgeErrorEl = document.getElementById('podcast-age-error');
+
   // Podcast Elements
   const podcastArtEl = document.getElementById('podcast-art');
   const podcastNameEl = document.getElementById('podcast-name');
@@ -42,6 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let historyRefreshInterval = null;
   // Lyrics cache to avoid re-fetching
   const lyricsCache = new Map();
+  // Age evaluation cache
+  const ageEvalCache = new Map();
 
   // Format time from milliseconds to MM:SS
   const formatTime = (ms) => {
@@ -111,6 +129,147 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Fetch and display age evaluation for a track or podcast
+  const fetchAndDisplayAgeEvaluation = async (item, type, lyrics) => {
+    try {
+      // Select the appropriate age evaluation elements based on content type
+      const ageContainerEl = type === 'track' ? trackAgeContainerEl : podcastAgeContainerEl;
+      const ageLoadingEl = type === 'track' ? trackAgeLoadingEl : podcastAgeLoadingEl;
+      const ageContentEl = type === 'track' ? trackAgeContentEl : podcastAgeContentEl;
+      const ageRatingEl = type === 'track' ? trackAgeRatingEl : podcastAgeRatingEl;
+      const ageExplanationEl = type === 'track' ? trackAgeExplanationEl : podcastAgeExplanationEl;
+      const ageErrorEl = type === 'track' ? trackAgeErrorEl : podcastAgeErrorEl;
+
+      // Skip if elements don't exist
+      if (!ageContainerEl) return;
+
+      // Reset age evaluation UI
+      ageContainerEl.classList.remove('hidden');
+      ageLoadingEl.classList.remove('hidden');
+      ageContentEl.classList.add('hidden');
+      ageErrorEl.classList.add('hidden');
+
+      // Check for required data
+      if (!item || !item.id) {
+        console.error('Missing item data for age evaluation');
+        showAgeError(ageLoadingEl, ageErrorEl, 'Cannot evaluate: Missing data');
+        return;
+      }
+
+      // Create cache key
+      const cacheKey = item.id;
+
+      // Check local cache first
+      if (ageEvalCache.has(cacheKey)) {
+        console.log(`Using local cache for age evaluation of "${item.name}"`);
+        displayAgeEvaluation(
+          ageEvalCache.get(cacheKey),
+          ageLoadingEl,
+          ageContentEl,
+          ageRatingEl,
+          ageExplanationEl,
+          ageErrorEl
+        );
+        return;
+      }
+
+      // Create parameters
+      const params = new URLSearchParams({
+        id: item.id,
+        type: type,
+        title: item.name || 'Unknown'
+      });
+
+      // Add additional parameters based on content type
+      if (type === 'track') {
+        params.append('artist', item.artists?.[0]?.name || 'Unknown');
+        if (lyrics) {
+          params.append('lyrics', lyrics);
+        }
+      } else if (type === 'episode') {
+        if (item.description) {
+          params.append('description', item.description);
+        }
+      }
+
+      console.log(`Requesting age evaluation for "${item.name}"`);
+
+      // Fetch evaluation from the API
+      const response = await fetch(`/api/age-evaluation?${params.toString()}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Age evaluation response:', data);
+
+      // Store in local cache
+      ageEvalCache.set(cacheKey, data);
+
+      // Display the evaluation
+      displayAgeEvaluation(
+        data,
+        ageLoadingEl,
+        ageContentEl,
+        ageRatingEl,
+        ageExplanationEl,
+        ageErrorEl
+      );
+    } catch (error) {
+      console.error('Error fetching age evaluation:', error);
+      const ageLoadingEl = type === 'track' ? trackAgeLoadingEl : podcastAgeLoadingEl;
+      const ageErrorEl = type === 'track' ? trackAgeErrorEl : podcastAgeErrorEl;
+      showAgeError(ageLoadingEl, ageErrorEl, error.message || 'Error evaluating content');
+    }
+  };
+
+  // Helper function to display age evaluation
+  const displayAgeEvaluation = (data, loadingEl, contentEl, ratingEl, explanationEl, errorEl) => {
+    // Hide loading
+    loadingEl.classList.add('hidden');
+
+    // If evaluation data exists
+    if (data && data.ageRating) {
+      // Set content
+      ratingEl.textContent = data.ageRating;
+
+      // Clean up the explanation if needed
+      let explanation = data.explanation;
+      // If the explanation still has JSON format strings, extract just the explanation text
+      if (explanation.includes('"explanation":')) {
+        try {
+          // Try to parse it as JSON
+          const parsed = JSON.parse(explanation);
+          explanation = parsed.explanation || explanation;
+        } catch (e) {
+          // If parsing fails, try to extract the explanation using regex
+          const match = explanation.match(/"explanation"\s*:\s*"([^"]+)"/);
+          if (match && match[1]) {
+            explanation = match[1];
+          }
+        }
+      }
+
+      // Set the explanation text
+      explanationEl.textContent = explanation;
+
+      // Show content
+      contentEl.classList.remove('hidden');
+    } else {
+      // Show error if no valid data
+      showAgeError(loadingEl, errorEl, 'No age evaluation available');
+    }
+  };
+
+  // Helper function to show age evaluation errors
+  const showAgeError = (loadingEl, errorEl, message) => {
+    loadingEl.classList.add('hidden');
+    errorEl.textContent = message;
+    errorEl.classList.remove('hidden');
+  };
+
   // Helper function to display lyrics
   const displayLyrics = (data) => {
     // Hide loading
@@ -127,11 +286,21 @@ document.addEventListener('DOMContentLoaded', () => {
         lyricsSourceLinkEl.href = data.url;
         lyricsSourceEl.classList.remove('hidden');
       }
+
+      // Now that we have lyrics, fetch age evaluation
+      if (currentData && currentData.item) {
+        fetchAndDisplayAgeEvaluation(currentData.item, 'track', data.lyrics);
+      }
     } else {
       // Show not found message
       lyricsNotFoundEl.classList.remove('hidden');
       if (data.error) {
         console.error('Lyrics error:', data.error);
+      }
+
+      // Even without lyrics, we can still evaluate based on track info
+      if (currentData && currentData.item) {
+        fetchAndDisplayAgeEvaluation(currentData.item, 'track', null);
       }
     }
   };
@@ -164,6 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
     trackContainerEl.classList.add('hidden');
     podcastContainerEl.classList.add('hidden');
     lyricsContainerEl.classList.add('hidden');
+
+    // Hide age containers
+    if (trackAgeContainerEl) trackAgeContainerEl.classList.add('hidden');
+    if (podcastAgeContainerEl) podcastAgeContainerEl.classList.add('hidden');
 
     currentData = data;
 
@@ -224,6 +397,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Show podcast container
       podcastContainerEl.classList.remove('hidden');
+
+      // Fetch age evaluation for the podcast
+      fetchAndDisplayAgeEvaluation(data.item, 'episode', null);
     }
   };
 
@@ -361,6 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Clear cache on page unload
   window.addEventListener('beforeunload', () => {
     lyricsCache.clear();
-    console.log('Lyrics cache cleared');
+    ageEvalCache.clear();
+    console.log('Caches cleared');
   });
 });
