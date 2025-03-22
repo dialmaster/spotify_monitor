@@ -461,3 +461,29 @@ h3 {
     font-size: 0.85rem;
   }
 }
+
+/* Spotify Link Styles */
+.spotify-link {
+  display: inline-flex;
+  align-items: center;
+  background-color: #1DB954;
+  color: white;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.spotify-link:hover {
+  background-color: #1ed760;
+  transform: scale(1.03);
+}
+
+.spotify-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+}

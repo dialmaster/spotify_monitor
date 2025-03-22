@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressBarFillEl = document.getElementById('progress-bar-fill');
   const currentTimeEl = document.getElementById('current-time');
   const totalTimeEl = document.getElementById('total-time');
+  const spotifyTrackLinkEl = document.getElementById('spotify-track-link');
 
   // Lyrics Elements
   const lyricsContainerEl = document.getElementById('lyrics-container');
@@ -53,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const podcastProgressBarFillEl = document.getElementById('podcast-progress-bar-fill');
   const podcastCurrentTimeEl = document.getElementById('podcast-current-time');
   const podcastTotalTimeEl = document.getElementById('podcast-total-time');
+  const spotifyPodcastLinkEl = document.getElementById('spotify-podcast-link');
 
   // Current state
   let currentData = null;
@@ -382,6 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
         albumArtEl.src = data.item.album.images[0].url;
       }
 
+      // Set Spotify Link if available
+      if (data.item.external_urls && data.item.external_urls.spotify) {
+        spotifyTrackLinkEl.href = data.item.external_urls.spotify;
+        spotifyTrackLinkEl.classList.remove('hidden');
+      } else {
+        spotifyTrackLinkEl.classList.add('hidden');
+      }
+
       // Update progress
       const progressPercent = (data.progress_ms / data.item.duration_ms) * 100;
       progressBarFillEl.style.width = `${progressPercent}%`;
@@ -411,6 +421,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Set podcast art
       if (data.item.images && data.item.images.length > 0) {
         podcastArtEl.src = data.item.images[0].url;
+      }
+
+      // Set Spotify Link if available
+      if (data.item.external_urls && data.item.external_urls.spotify) {
+        spotifyPodcastLinkEl.href = data.item.external_urls.spotify;
+        spotifyPodcastLinkEl.classList.remove('hidden');
+      } else {
+        spotifyPodcastLinkEl.classList.add('hidden');
       }
 
       // Update progress
