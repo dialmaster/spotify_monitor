@@ -29,6 +29,29 @@
       margin-bottom: 0.5rem;
     }
 
+    .age-level {
+      font-weight: bold;
+      font-size: 0.85rem;
+      color: white;
+      padding: 0.2rem 0.6rem;
+      border-radius: 1rem;
+      display: inline-block;
+      margin-left: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .age-level-OK {
+      background-color: #4caf50; /* Green */
+    }
+
+    .age-level-WARNING {
+      background-color: #ff9800; /* Yellow/Orange */
+    }
+
+    .age-level-BLOCK {
+      background-color: #f44336; /* Red */
+    }
+
     .age-explanation {
       font-size: 0.9rem;
       line-height: 1.4;
@@ -95,7 +118,10 @@
               <h3>Age Appropriateness</h3>
               <div id="track-age-loading" class="age-loading">Evaluating content...</div>
               <div id="track-age-content" class="age-content hidden">
-                <div class="age-rating" id="track-age-rating"></div>
+                <div class="age-rating-container">
+                  <div class="age-rating" id="track-age-rating"></div>
+                  <div class="age-level" id="track-age-level"></div>
+                </div>
                 <div class="age-explanation" id="track-age-explanation"></div>
               </div>
               <div id="track-age-error" class="age-error hidden">Unable to evaluate content</div>
@@ -126,7 +152,10 @@
             <h3>Age Appropriateness</h3>
             <div id="podcast-age-loading" class="age-loading">Evaluating content...</div>
             <div id="podcast-age-content" class="age-content hidden">
-              <div class="age-rating" id="podcast-age-rating"></div>
+              <div class="age-rating-container">
+                <div class="age-rating" id="podcast-age-rating"></div>
+                <div class="age-level" id="podcast-age-level"></div>
+              </div>
               <div class="age-explanation" id="podcast-age-explanation"></div>
             </div>
             <div id="podcast-age-error" class="age-error hidden">Unable to evaluate content</div>

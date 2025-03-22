@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const trackAgeLoadingEl = document.getElementById('track-age-loading');
   const trackAgeContentEl = document.getElementById('track-age-content');
   const trackAgeRatingEl = document.getElementById('track-age-rating');
+  const trackAgeLevelEl = document.getElementById('track-age-level');
   const trackAgeExplanationEl = document.getElementById('track-age-explanation');
   const trackAgeErrorEl = document.getElementById('track-age-error');
 
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const podcastAgeLoadingEl = document.getElementById('podcast-age-loading');
   const podcastAgeContentEl = document.getElementById('podcast-age-content');
   const podcastAgeRatingEl = document.getElementById('podcast-age-rating');
+  const podcastAgeLevelEl = document.getElementById('podcast-age-level');
   const podcastAgeExplanationEl = document.getElementById('podcast-age-explanation');
   const podcastAgeErrorEl = document.getElementById('podcast-age-error');
 
@@ -162,8 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // Check local cache first
       if (ageEvalCache.has(cacheKey)) {
         console.log(`Using local cache for age evaluation of "${item.name}"`);
+        const cachedData = ageEvalCache.get(cacheKey);
+        // Add the type to the cached data for level element selection
+        cachedData.type = type;
         displayAgeEvaluation(
-          ageEvalCache.get(cacheKey),
+          cachedData,
           ageLoadingEl,
           ageContentEl,
           ageRatingEl,
@@ -204,6 +209,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = await response.json();
       console.log('Age evaluation response:', data);
+
+      // Add the type to the data for level element selection
+      data.type = type;
 
       // Store in local cache
       ageEvalCache.set(cacheKey, data);
@@ -254,6 +262,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Set the explanation text
       explanationEl.textContent = explanation;
+
+      // Handle the level indicator (if it exists in the DOM)
+      const levelEl = data.type === 'track' ? trackAgeLevelEl : podcastAgeLevelEl;
+      if (levelEl && data.level) {
+        // Set the level text
+        levelEl.textContent = data.level;
+
+        // Remove any existing level classes
+        levelEl.classList.remove('age-level-OK', 'age-level-WARNING', 'age-level-BLOCK');
+
+        // Add the appropriate class based on level
+        levelEl.classList.add(`age-level-${data.level}`);
+
+        // Make sure it's visible
+        levelEl.classList.remove('hidden');
+      }
 
       // Show content
       contentEl.classList.remove('hidden');

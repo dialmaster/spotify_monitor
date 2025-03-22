@@ -538,7 +538,7 @@ app.get('/api/age-evaluation', async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "You are an assistant that evaluates the age appropriateness of music tracks and podcasts. Provide a clear age recommendation (e.g., 'All ages', '13+', '16+', '18+') and a brief explanation why. Be objective and consider lyrical content, themes, and language. Format your response as JSON with 'ageRating' and 'explanation' fields. DO NOT wrap your response in markdown code blocks."
+          content: "You are an assistant that evaluates the age appropriateness of music tracks and podcasts. Provide a clear age recommendation (e.g., 'All ages', '13+', '16+', '18+') and a brief explanation why. Be objective and consider lyrical content, themes, and language. Format your response as JSON with 'ageRating', 'explanation', and 'level' fields. The level field should be 'OK' if the content is appropriate for all ages, 'WARNING' if it's appropriate for late teens and older, and 'BLOCK' if it's appropriate for adults only. DO NOT wrap your response in markdown code blocks."
         },
         {
           role: "user",
@@ -574,6 +574,7 @@ app.get('/api/age-evaluation', async (req, res) => {
       response = {
         ageRating: ageRating,
         explanation: rawContent.replace(/```json|```/g, '').trim(),
+        level: 'Unknown'
       };
     }
 
