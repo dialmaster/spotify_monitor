@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset lyrics UI
       lyricsContainerEl.classList.remove('hidden');
       lyricsLoadingEl.classList.remove('hidden');
+      lyricsLoadingEl.textContent = `Attempting to fetch lyrics for "${trackName}"...`;
       lyricsContentEl.classList.add('hidden');
       lyricsNotFoundEl.classList.add('hidden');
       lyricsSourceEl.classList.add('hidden');
@@ -146,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset lyrics UI (we'll use the same container for transcripts)
       lyricsContainerEl.classList.remove('hidden');
       lyricsLoadingEl.classList.remove('hidden');
+      lyricsLoadingEl.textContent = `Attempting to fetch transcript for "${episodeName}"...`;
       lyricsContentEl.classList.add('hidden');
       lyricsNotFoundEl.classList.add('hidden');
       lyricsSourceEl.classList.add('hidden');
@@ -233,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset age evaluation UI
       ageContainerEl.classList.remove('hidden');
       ageLoadingEl.classList.remove('hidden');
+      ageLoadingEl.textContent = `Evaluating ${type === 'track' ? 'track' : 'podcast'} "${item.name}" with AI...`;
       ageContentEl.classList.add('hidden');
       ageErrorEl.classList.add('hidden');
 
