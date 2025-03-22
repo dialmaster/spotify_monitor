@@ -320,45 +320,51 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Create parameters
-      const params = new URLSearchParams({
+      // Create request data object
+      const requestData = {
         id: item.id,
         type: type,
         title: item.name || 'Unknown'
-      });
+      };
 
-      // Add additional parameters based on content type
+      // Add additional data based on content type
       if (type === 'track') {
-        params.append('artist', item.artists?.[0]?.name || 'Unknown');
+        requestData.artist = item.artists?.[0]?.name || 'Unknown';
         if (lyrics) {
-          params.append('lyrics', lyrics);
+          requestData.lyrics = lyrics;
         }
         // Pass lyrics source if available
         if (lyricsSource) {
-          params.append('lyricsSource', lyricsSource);
+          requestData.lyricsSource = lyricsSource;
         }
       } else if (type === 'episode') {
         if (item.description) {
-          params.append('description', item.description);
+          requestData.description = item.description;
         }
         if (lyrics) {
-          params.append('lyrics', lyrics);
+          requestData.lyrics = lyrics;
         }
         // Pass lyrics source if available
         if (lyricsSource) {
-          params.append('lyricsSource', lyricsSource);
+          requestData.lyricsSource = lyricsSource;
         }
       }
 
       // Also pass spotifyUrl if available
       if (item.external_urls && item.external_urls.spotify) {
-        params.append('spotifyUrl', item.external_urls.spotify);
+        requestData.spotifyUrl = item.external_urls.spotify;
       }
 
       console.log(`Requesting age evaluation for "${item.name}"`);
 
-      // Make request to age evaluation API
-      const response = await fetch(`/api/age-evaluation?${params.toString()}`);
+      console.log('Making age evaluation request...');
+      const response = await fetch('/api/age-evaluation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
 
       if (!response.ok) {
         const errorData = await response.json();

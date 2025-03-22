@@ -686,9 +686,9 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
         return textSpans.map(el => el.textContent.trim()).join('\n');
       });
 
-      // Log stats and limit to 4000 characters
+      // Log stats and limit to 5000 characters
       if (transcript) {
-        const truncatedTranscript = transcript.substring(0, 4000);
+        const truncatedTranscript = transcript.substring(0, 5000);
         const originalLength = transcript.length;
         const lineCount = transcript.split('\n').length;
         console.log(`Successfully extracted transcript (${lineCount} lines, ${originalLength} chars, truncated to 4000 chars)`);
@@ -848,10 +848,13 @@ app.get('/api/lyrics', async (req, res) => {
   }
 });
 
-// API endpoint to get age evaluation for a track or podcast
-app.get('/api/age-evaluation', async (req, res) => {
+// Add middleware to parse JSON request bodies
+app.use(express.json({ limit: '5mb' }));
+
+// POST endpoint for age evaluation
+app.post('/api/age-evaluation', async (req, res) => {
   try {
-    const { id, type, title, artist, description, lyrics } = req.query;
+    const { id, type, title, artist, description, lyrics, lyricsSource, spotifyUrl } = req.body;
 
     // Basic validation
     if (!id || !type || !title) {
@@ -884,9 +887,6 @@ app.get('/api/age-evaluation', async (req, res) => {
       ageEvaluationCache.delete(oldestKey);
       console.log('Age evaluation cache full, removed oldest entry');
     }
-
-    // Track the source of lyrics for confidence level
-    const lyricsSource = req.query.lyricsSource || '';
 
     // Prepare content for evaluation
     let content = '';
@@ -989,8 +989,7 @@ DO NOT wrap your response in markdown code blocks.`,
     let confidenceExplanation = '';
 
     // Safely check if spotifyUrl exists and contains spotify.com
-    const spotifyUrl = req.query.spotifyUrl || '';
-    const fromSpotify = spotifyUrl.includes('spotify.com');
+    const fromSpotify = spotifyUrl && spotifyUrl.includes('spotify.com');
 
     if (lyricsSource === 'spotify-api' || lyricsSource === 'spotify-web' || lyricsSource === 'spotify-podcast-transcript') {
       confidenceLevel = 'HIGH';
