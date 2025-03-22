@@ -343,10 +343,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const progressPercent = (currentData.progress_ms / currentData.item.duration_ms) * 100;
         progressBarFillEl.style.width = `${Math.min(progressPercent, 100)}%`;
         currentTimeEl.textContent = formatTime(currentData.progress_ms);
+
+        // Check if track has ended (reached end of duration)
+        if (currentData.progress_ms >= currentData.item.duration_ms) {
+          console.log('Track has ended, fetching new data in 1 second...');
+          // Wait 1 second then fetch new data
+          setTimeout(() => {
+            fetchCurrentlyPlaying();
+          }, 1000);
+        }
       } else if (currentData.type === 'episode') {
         const progressPercent = (currentData.progress_ms / currentData.item.duration_ms) * 100;
         podcastProgressBarFillEl.style.width = `${Math.min(progressPercent, 100)}%`;
         podcastCurrentTimeEl.textContent = formatTime(currentData.progress_ms);
+
+        // Check if episode has ended (reached end of duration)
+        if (currentData.progress_ms >= currentData.item.duration_ms) {
+          console.log('Episode has ended, fetching new data in 1 second...');
+          // Wait 1 second then fetch new data
+          setTimeout(() => {
+            fetchCurrentlyPlaying();
+          }, 1000);
+        }
       }
     }
   };
