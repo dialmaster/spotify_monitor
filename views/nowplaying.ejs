@@ -53,6 +53,87 @@
       background-color: #f44336; /* Red */
     }
 
+    .confidence-level {
+      font-size: 0.8rem;
+      font-weight: bold;
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.2rem;
+      display: inline-block;
+      margin-left: 0.5rem;
+      text-transform: uppercase;
+      position: relative;
+    }
+
+    .confidence-HIGH {
+      background-color: #4caf50; /* Green */
+      color: white;
+    }
+
+    .confidence-MEDIUM {
+      background-color: #ff9800; /* Yellow/Orange */
+      color: white;
+    }
+
+    .confidence-LOW {
+      background-color: #f44336; /* Red */
+      color: white;
+    }
+
+    .confidence-info {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.25);
+      text-align: center;
+      line-height: 16px;
+      font-size: 10px;
+      margin-left: 5px;
+      cursor: help;
+      color: white;
+      position: relative;
+      font-weight: bold;
+    }
+
+    .confidence-info:hover .confidence-tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .confidence-tooltip {
+      visibility: hidden;
+      opacity: 0;
+      width: 220px;
+      background-color: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 10px;
+      position: absolute;
+      z-index: 10;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -110px;
+      transition: opacity 0.3s;
+      font-weight: normal;
+      text-transform: none;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+    }
+
+    .confidence-tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+    }
+
     .age-explanation {
       font-size: 0.9rem;
       line-height: 1.4;
@@ -87,6 +168,19 @@
         font-size: 0.75rem;
         padding: 0.15rem 0.4rem;
         margin-left: 0.3rem;
+      }
+
+      .confidence-level {
+        font-size: 0.7rem;
+        padding: 0.1rem 0.3rem;
+        margin-left: 0.3rem;
+      }
+
+      .confidence-tooltip {
+        width: 160px;
+        margin-left: -80px;
+        font-size: 0.7rem;
+        padding: 6px;
       }
 
       .age-explanation {
@@ -152,6 +246,7 @@
                 <div class="age-rating-container">
                   <div class="age-rating" id="track-age-rating"></div>
                   <div class="age-level" id="track-age-level"></div>
+                  <div class="confidence-level" id="track-confidence-level"></div>
                 </div>
                 <div class="age-explanation" id="track-age-explanation"></div>
               </div>
@@ -189,6 +284,7 @@
               <div class="age-rating-container">
                 <div class="age-rating" id="podcast-age-rating"></div>
                 <div class="age-level" id="podcast-age-level"></div>
+                <div class="confidence-level" id="podcast-confidence-level"></div>
               </div>
               <div class="age-explanation" id="podcast-age-explanation"></div>
             </div>

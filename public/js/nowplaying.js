@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const trackAgeLevelEl = document.getElementById('track-age-level');
   const trackAgeExplanationEl = document.getElementById('track-age-explanation');
   const trackAgeErrorEl = document.getElementById('track-age-error');
+  const trackConfidenceLevelEl = document.getElementById('track-confidence-level');
 
   // Podcast Age Evaluation Elements
   const podcastAgeContainerEl = document.getElementById('podcast-age-container');
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const podcastAgeLevelEl = document.getElementById('podcast-age-level');
   const podcastAgeExplanationEl = document.getElementById('podcast-age-explanation');
   const podcastAgeErrorEl = document.getElementById('podcast-age-error');
+  const podcastConfidenceLevelEl = document.getElementById('podcast-confidence-level');
 
   // Podcast Elements
   const podcastArtEl = document.getElementById('podcast-art');
@@ -83,18 +85,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fetch and display lyrics for a track
   const fetchAndDisplayLyrics = async (trackName, artistName) => {
     try {
-      // Reset lyrics UI
+      // Reset UI
       lyricsContainerEl.classList.remove('hidden');
-      lyricsLoadingEl.classList.remove('hidden');
-      lyricsLoadingEl.textContent = `Attempting to fetch lyrics for "${trackName}"...`;
       lyricsContentEl.classList.add('hidden');
       lyricsNotFoundEl.classList.add('hidden');
       lyricsSourceEl.classList.add('hidden');
+      lyricsLoadingEl.classList.remove('hidden');
+      lyricsLoadingEl.textContent = `Attempting to fetch lyrics for "${trackName}"...`;
 
-      // Create a cache key from track name and artist
-      const cacheKey = `${trackName}:::${artistName}`;
+      // Get Spotify URL for the current track if available
+      let spotifyUrl = '';
+      if (currentData && currentData.item && currentData.item.external_urls && currentData.item.external_urls.spotify) {
+        spotifyUrl = currentData.item.external_urls.spotify;
+      }
 
-      // Check if we already have lyrics for this track in cache
+      // Check cache first
+      const cacheKey = `${trackName}-${artistName}`;
       if (lyricsCache.has(cacheKey)) {
         console.log(`Using cached lyrics for "${trackName}" by ${artistName}`);
         const cachedData = lyricsCache.get(cacheKey);
@@ -102,42 +108,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Limit cache size (keep no more than 50 entries)
-      if (lyricsCache.size >= 50) {
-        // Get the oldest key and delete it
-        const oldestKey = lyricsCache.keys().next().value;
-        lyricsCache.delete(oldestKey);
-        console.log('Lyrics cache full, removed oldest entry');
-      }
-
-      console.log(`Requesting lyrics for "${trackName}" by ${artistName}`);
-
-      // Get the spotify URL from the current track if available
-      let spotifyUrl = '';
-      if (currentData && currentData.item && currentData.item.external_urls && currentData.item.external_urls.spotify) {
-        spotifyUrl = currentData.item.external_urls.spotify;
-        console.log(`Including Spotify URL in lyrics request: ${spotifyUrl}`);
-      }
-
       // Fetch lyrics from the API with the spotify URL included
-      const response = await fetch(`/api/lyrics?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}${spotifyUrl ? `&spotifyUrl=${encodeURIComponent(spotifyUrl)}` : ''}`);
+      const apiUrl = `/api/lyrics?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}${spotifyUrl ? `&spotifyUrl=${encodeURIComponent(spotifyUrl)}` : ''}`;
+      console.log(`Fetching lyrics from: ${apiUrl}`);
+      const response = await fetch(apiUrl);
 
       if (!response.ok) {
         throw new Error(`Error fetching lyrics: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Lyrics API response:', data);
 
-      // Store in cache even if no lyrics were found (to avoid re-fetching)
+      // Store in cache
       lyricsCache.set(cacheKey, data);
 
-      // Display the lyrics
       displayLyrics(data);
     } catch (error) {
       console.error('Error fetching lyrics:', error);
       lyricsLoadingEl.classList.add('hidden');
       lyricsNotFoundEl.classList.remove('hidden');
+      lyricsNotFoundEl.textContent = `Error: ${error.message}`;
+
+      // Even if lyrics fetch fails, we should still do age evaluation
+      if (currentData && currentData.item) {
+        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, null, null, null);
+      }
     }
   };
 
@@ -180,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lyricsNotFoundEl.classList.remove('hidden');
         // Since we couldn't get transcript, pass null to age evaluation
         if (currentData && currentData.item) {
-          fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null);
+          fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null, null, null);
         }
         return;
       }
@@ -212,14 +207,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Even if transcript fetch fails, we should still do age evaluation
       if (currentData && currentData.item) {
-        fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null);
+        fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null, null, null);
       }
     }
   };
 
   // Fetch and display age evaluation for a track or podcast
-  const fetchAndDisplayAgeEvaluation = async (item, type, lyrics) => {
-    console.log('Fetching age evaluation for:', item, type, lyrics);
+  const fetchAndDisplayAgeEvaluation = async (item, type, lyrics, lyricsSource, sourceDetail) => {
+    console.log('Fetching age evaluation for:', item, type, lyrics ? 'with lyrics' : 'without lyrics');
     try {
       // Select the appropriate age evaluation elements based on content type
       const ageContainerEl = type === 'track' ? trackAgeContainerEl : podcastAgeContainerEl;
@@ -255,6 +250,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const cachedData = ageEvalCache.get(cacheKey);
         // Add the type to the cached data for level element selection
         cachedData.type = type;
+
+        // Update the cached entry with potentially new lyrics source for confidence level
+        if (lyricsSource && !cachedData.lyricsSource) {
+          cachedData.lyricsSource = lyricsSource;
+        }
+
+        // Update sourceDetail if available
+        if (sourceDetail && !cachedData.sourceDetail) {
+          cachedData.sourceDetail = sourceDetail;
+        }
+
         displayAgeEvaluation(
           cachedData,
           ageLoadingEl,
@@ -279,6 +285,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lyrics) {
           params.append('lyrics', lyrics);
         }
+        // Pass lyrics source if available
+        if (lyricsSource) {
+          params.append('lyricsSource', lyricsSource);
+        }
       } else if (type === 'episode') {
         if (item.description) {
           params.append('description', item.description);
@@ -286,11 +296,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lyrics) {
           params.append('lyrics', lyrics);
         }
+        // Pass lyrics source if available
+        if (lyricsSource) {
+          params.append('lyricsSource', lyricsSource);
+        }
+      }
+
+      // Also pass spotifyUrl if available
+      if (item.external_urls && item.external_urls.spotify) {
+        params.append('spotifyUrl', item.external_urls.spotify);
       }
 
       console.log(`Requesting age evaluation for "${item.name}"`);
 
-      // Fetch evaluation from the API
+      // Make request to age evaluation API
       const response = await fetch(`/api/age-evaluation?${params.toString()}`);
 
       if (!response.ok) {
@@ -303,6 +322,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Add the type to the data for level element selection
       data.type = type;
+
+      // Add the lyrics source for confidence level determination
+      data.lyricsSource = lyricsSource;
+
+      // Add source detail if available
+      if (sourceDetail) {
+        data.sourceDetail = sourceDetail;
+      }
 
       // Store in local cache
       ageEvalCache.set(cacheKey, data);
@@ -370,11 +397,84 @@ document.addEventListener('DOMContentLoaded', () => {
         levelEl.classList.remove('hidden');
       }
 
+      // Handle the confidence level
+      const confidenceLevelEl = data.type === 'track' ? trackConfidenceLevelEl : podcastConfidenceLevelEl;
+      if (confidenceLevelEl) {
+        // Get confidence level from data or determine it based on lyrics source
+        let confidenceLevel;
+        let confidenceText = 'Confidence: ';
+        let tooltipText = '';
+
+        // First check if server provided confidence info
+        if (data.confidence && data.confidence.level) {
+          confidenceLevel = data.confidence.level;
+          tooltipText = data.confidence.explanation || getDefaultTooltipText(confidenceLevel);
+        }
+        // Otherwise determine based solely on lyrics source, regardless of content type
+        else {
+          // Check if we have lyrics and determine the source
+          if (data.lyricsSource) {
+            // Spotify sources get HIGH confidence
+            if (data.lyricsSource === 'spotify-web' ||
+                data.lyricsSource === 'spotify-api' ||
+                data.lyricsSource === 'spotify-podcast-transcript') {
+              confidenceLevel = 'HIGH';
+              tooltipText = data.sourceDetail || getDefaultTooltipText('HIGH');
+            }
+            // Genius gets MEDIUM confidence
+            else if (data.lyricsSource === 'genius') {
+              confidenceLevel = 'MEDIUM';
+              tooltipText = data.sourceDetail || getDefaultTooltipText('MEDIUM');
+            }
+            // Any other source gets LOW confidence
+            else {
+              confidenceLevel = 'LOW';
+              tooltipText = getDefaultTooltipText('LOW');
+            }
+          }
+          // No lyrics = LOW confidence
+          else {
+            confidenceLevel = 'LOW';
+            tooltipText = getDefaultTooltipText('LOW');
+          }
+        }
+
+        // Set the confidence level text with info icon and tooltip
+        confidenceLevelEl.innerHTML = confidenceText + confidenceLevel +
+          ` <span class="confidence-info">i<span class="confidence-tooltip">${tooltipText}</span></span>`;
+
+        // Remove any existing confidence classes
+        confidenceLevelEl.classList.remove('confidence-HIGH', 'confidence-MEDIUM', 'confidence-LOW');
+
+        // Add the appropriate class based on confidence
+        confidenceLevelEl.classList.add(`confidence-${confidenceLevel}`);
+
+        // Make sure it's visible
+        confidenceLevelEl.classList.remove('hidden');
+
+        // Store the confidence level in the data for cache
+        data.confidenceLevel = confidenceLevel;
+      }
+
       // Show content
       contentEl.classList.remove('hidden');
     } else {
       // Show error if no valid data
       showAgeError(loadingEl, errorEl, 'No age evaluation available');
+    }
+  };
+
+  // Helper function to get default tooltip text based on confidence level
+  const getDefaultTooltipText = (confidenceLevel) => {
+    switch(confidenceLevel) {
+      case 'HIGH':
+        return 'HIGH confidence: Evaluation based on complete lyrics/transcript directly from Spotify.';
+      case 'MEDIUM':
+        return 'MEDIUM confidence: Evaluation based on lyrics from a third-party source (Genius).';
+      case 'LOW':
+        return 'LOW confidence: No lyrics/transcript available for analysis.';
+      default:
+        return 'Confidence level indicates how reliable this evaluation is based on available lyrics or transcript.';
     }
   };
 
@@ -418,7 +518,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Now that we have lyrics, fetch age evaluation
       if (currentData && currentData.item) {
-        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, data.lyrics);
+        // Use sourceDetail if available for more detailed confidence information
+        const sourceDetail = data.sourceDetail || null;
+        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, data.lyrics, data.source, sourceDetail);
       }
     } else {
       // Show not found message
@@ -437,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Even without lyrics, we can still evaluate based on track info
       if (currentData && currentData.item) {
-        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, null);
+        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, null, null, null);
       }
     }
   };
@@ -575,7 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Remove the direct age evaluation call - it will be called after transcript fetch
       } else {
         // If no Spotify URL, we can't fetch transcript, so evaluate without it
-        fetchAndDisplayAgeEvaluation(data.item, 'episode', null);
+        fetchAndDisplayAgeEvaluation(data.item, 'episode', null, null, null);
       }
     }
   };

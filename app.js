@@ -756,7 +756,8 @@ app.get('/api/lyrics', async (req, res) => {
           lyrics: transcript, // We use the lyrics field for consistency with the frontend
           title,
           source: 'spotify-podcast-transcript',
-          url: spotifyUrl
+          url: spotifyUrl,
+          sourceDetail: 'Official transcript from Spotify podcast'
         });
       } else {
         console.log('Could not fetch transcript for podcast episode');
@@ -796,7 +797,8 @@ app.get('/api/lyrics', async (req, res) => {
           title,
           artist,
           source,
-          url: spotifyUrl
+          url: spotifyUrl,
+          sourceDetail: 'Official lyrics from Spotify web player'
         });
       } else {
         console.log('Could not fetch lyrics from Spotify web page, falling back to Genius');
@@ -833,7 +835,8 @@ app.get('/api/lyrics', async (req, res) => {
         artist: song.artist.name,
         image: song.image,
         source,
-        url: song.url
+        url: song.url,
+        sourceDetail: 'Lyrics from Genius (third-party lyrics database)'
       });
     } catch (searchError) {
       console.error('Genius search/lyrics error:', searchError.message);
@@ -848,10 +851,13 @@ app.get('/api/lyrics', async (req, res) => {
 // API endpoint to get age evaluation for a track or podcast
 app.get('/api/age-evaluation', async (req, res) => {
   try {
-    const { id, type, title, artist, lyrics, description } = req.query;
+    const { id, type, title, artist, description, lyrics } = req.query;
 
+    // Basic validation
     if (!id || !type || !title) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+      return res.status(400).json({
+        error: 'Missing required parameters: id, type, and title'
+      });
     }
 
     // Check if OpenAI is configured
@@ -862,7 +868,7 @@ app.get('/api/age-evaluation', async (req, res) => {
       });
     }
 
-    // Create cache key
+    // Create cache key from item ID
     const cacheKey = id;
 
     // Check cache first
@@ -878,6 +884,9 @@ app.get('/api/age-evaluation', async (req, res) => {
       ageEvaluationCache.delete(oldestKey);
       console.log('Age evaluation cache full, removed oldest entry');
     }
+
+    // Track the source of lyrics for confidence level
+    const lyricsSource = req.query.lyricsSource || '';
 
     // Prepare content for evaluation
     let content = '';
@@ -974,6 +983,33 @@ DO NOT wrap your response in markdown code blocks.`,
         level: level
       };
     }
+
+    // Determine confidence level based on lyrics source
+    let confidenceLevel = 'LOW';
+    let confidenceExplanation = '';
+
+    // Safely check if spotifyUrl exists and contains spotify.com
+    const spotifyUrl = req.query.spotifyUrl || '';
+    const fromSpotify = spotifyUrl.includes('spotify.com');
+
+    if (lyricsSource === 'spotify-api' || lyricsSource === 'spotify-web' || lyricsSource === 'spotify-podcast-transcript') {
+      confidenceLevel = 'HIGH';
+      confidenceExplanation = type === 'track'
+        ? 'We have official lyrics from Spotify'
+        : 'We have an official transcript from Spotify';
+    } else if (lyricsSource === 'genius') {
+      confidenceLevel = 'MEDIUM';
+      confidenceExplanation = 'We have third-party lyrics from Genius';
+    } else {
+      confidenceLevel = 'LOW';
+      confidenceExplanation = 'No lyrics or transcript available';
+    }
+
+    // Add confidence info to response
+    response.confidence = {
+      level: confidenceLevel,
+      explanation: confidenceExplanation
+    };
 
     // Store in cache
     ageEvaluationCache.set(cacheKey, response);
