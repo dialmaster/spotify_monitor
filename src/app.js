@@ -34,6 +34,7 @@ const server = app.listen(config.port, () => {
   console.log(`OpenAI API key configured: ${config.hasAgeEvaluation() ? 'Yes' : 'No (age evaluation disabled)'}`);
   console.log(`Spotify Web cookies configured: ${config.hasSpotifyWebAccess() ? 'Yes' : 'No (Spotify lyrics/transcripts disabled)'}`);
   console.log(`Age evaluation configured for listener age: ${config.ageEvaluation.listenerAge}`);
+  console.log(`Auto-skip blocked content: ${config.autoSkipBlocked ? 'Yes' : 'No'}`);
   if (config.ageEvaluation.customInstructions) {
     console.log(`Custom age evaluation instructions: "${config.ageEvaluation.customInstructions}"`);
   }

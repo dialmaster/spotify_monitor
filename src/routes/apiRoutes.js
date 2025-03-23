@@ -3,6 +3,7 @@ const router = express.Router();
 const spotifyService = require('../services/spotifyService');
 const lyricsService = require('../services/lyricsService');
 const ageEvaluationService = require('../services/ageEvaluationService');
+const config = require('../config');
 
 // API endpoint to get currently playing
 router.get('/currently-playing', async (req, res) => {
@@ -166,6 +167,33 @@ router.post('/age-evaluation', async (req, res) => {
     const evaluation = await ageEvaluationService.evaluateContentAge({
       id, type, title, artist, description, lyrics, lyricsSource, spotifyUrl
     });
+
+    // Check if content is blocked and auto-skip is enabled
+    if (config.autoSkipBlocked && evaluation.level === 'BLOCK') {
+      console.log(`Content "${title}" rated as BLOCK level. Auto-skip is enabled, attempting to skip...`);
+
+      // Get current playback to verify this is still the active track
+      const currentPlayback = spotifyService.getCachedData.currentPlayback();
+
+      // Only skip if this is still the currently playing track/episode
+      if (currentPlayback && currentPlayback.playing && currentPlayback.item && currentPlayback.item.id === id) {
+        const skipResult = await spotifyService.skipToNextTrack();
+
+        // Add the skip result to the evaluation response
+        evaluation.autoSkipped = skipResult;
+
+        // Add skip message for the frontend to display
+        if (skipResult) {
+          evaluation.skipMessage = `"${title}" was auto-skipped due to AI content evaluation. [${Date.now()}]`;
+          console.log(`Auto-skipped "${title}" due to BLOCK rating`);
+        } else {
+          console.log(`Failed to auto-skip "${title}" despite BLOCK rating`);
+        }
+      } else {
+        console.log(`Not auto-skipping "${title}" as it's no longer the active track`);
+        evaluation.autoSkipped = false;
+      }
+    }
 
     res.json(evaluation);
   } catch (error) {

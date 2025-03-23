@@ -1,6 +1,6 @@
 # Spotify Account Monitor
 
-Spotify Account Monitor is a comprehensive web application that allows parents and guardians to track and monitor Spotify listening activity in real-time. The app displays currently playing tracks or podcasts with detailed information including album art, artists, playback progress, and recently played content. It features lyrics retrieval via the Spotify or the Genius API, enabling users to review song content, and leverages OpenAI's API to provide age appropriateness evaluations for both music and podcast content based on configurable age thresholds. With customizable monitoring intervals and multi-account support, this tool helps parents make informed decisions about their children's music and podcast consumption while maintaining a sleek, user-friendly interface that updates automatically without requiring page refreshes.
+Spotify Account Monitor is a comprehensive web application that allows parents and guardians to track and monitor Spotify listening activity in real-time. The app displays currently playing tracks or podcasts with detailed information including album art, artists, playback progress, and recently played content. It features lyrics retrieval via the Spotify or the Genius API, enabling users to review song content, and leverages OpenAI's API to provide age appropriateness evaluations for both music and podcast content based on configurable age thresholds. With customizable monitoring intervals, auto-skip capability for inappropriate content, and multi-account support, this tool helps parents make informed decisions about their children's music and podcast consumption while maintaining a sleek, user-friendly interface that updates automatically without requiring page refreshes.
 
 ## Feature Availability Based on Configuration
 
@@ -28,6 +28,7 @@ The app has different levels of functionality depending on which API keys you co
 - **With OpenAI API Key**:
   - All basic features
   - AI-powered age appropriateness evaluations for songs and podcasts
+  - Auto-skip functionality for blocked content when enabled
   - Note: Without this, the age evaluation feature will be disabled
 
 ## System Requirements
@@ -80,6 +81,7 @@ The app has different levels of functionality depending on which API keys you co
      "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
      "redirectUri": "http://localhost:8888/callback",
      "port": 8888,
+     "autoSkipBlocked": true,
      "monitorInterval": 30000,
      "geniusApiKey": "YOUR_GENIUS_API_KEY",
      "openAiApiKey": "YOUR_OPENAI_API_KEY",
@@ -93,6 +95,7 @@ The app has different levels of functionality depending on which API keys you co
    - If you don't want to use a specific feature, you can leave its API key as the example value or remove it
    - The app will automatically disable features for which valid API keys aren't provided
    - You can adjust the `monitorInterval` value (in milliseconds) to change how often the app checks what's playing
+   - Set `autoSkipBlocked` to `true` to automatically skip tracks that are rated as blocked by the age evaluation
 
 5. **Get Spotify Web Cookies (Optional but recommended for best lyrics/transcript retrieval)**:
    - Log in to [Spotify Web Player](https://open.spotify.com/) in your browser
@@ -139,6 +142,7 @@ To monitor different Spotify accounts:
      "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
      "redirectUri": "http://localhost:8889/callback",
      "port": 8889,
+     "autoSkipBlocked": true,
      "monitorInterval": 30000,
      "openAiApiKey": "YOUR_OPENAI_API_KEY"
    }
@@ -156,6 +160,8 @@ To monitor different Spotify accounts:
 - Displays track information including name, artist, album, and playback progress
 - Shows lyrics for currently playing tracks (requires Genius API key or Spotify Web Cookies)
 - Evaluates age appropriateness of content (requires OpenAI API key)
+- Automatically skips tracks/podcasts rated as blocked based on age settings (optional feature)
+- Displays toast notifications when content is automatically skipped
 - Supports monitoring different accounts using different config files
 
 ## Troubleshooting

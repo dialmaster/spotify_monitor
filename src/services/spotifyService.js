@@ -213,6 +213,53 @@ const getRecentlyPlayed = async () => {
   }
 };
 
+// Skip to the next track
+const skipToNextTrack = async () => {
+  try {
+    console.log('Attempting to skip to next track due to age restriction...');
+
+    if (isTokenExpired()) {
+      const refreshed = await refreshAccessToken();
+      if (!refreshed) {
+        throw new Error('Failed to refresh access token');
+      }
+    }
+
+    if (!tokenInfo.access_token) {
+      throw new Error('No access token available. Please authorize first.');
+    }
+
+    // Call the Spotify API to skip to the next track
+    const response = await axios({
+      method: 'post',
+      url: 'https://api.spotify.com/v1/me/player/next',
+      headers: {
+        'Authorization': 'Bearer ' + tokenInfo.access_token
+      }
+    });
+
+    // Status 204 means success with no content, 200 is also a success
+    if (response.status === 204 || response.status === 200) {
+      console.log('Successfully skipped to next track');
+      return true;
+    } else {
+      console.error('Unexpected response from Spotify skip API:', response.status, response.statusText);
+      return false;
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Spotify API Error (Skip Track):', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message
+      });
+    } else {
+      console.error('Error in skipToNextTrack:', error.message);
+    }
+    return false;
+  }
+};
+
 // Monitor function
 const monitorCurrentlyPlaying = async () => {
   try {
@@ -281,7 +328,7 @@ const startMonitoring = () => {
 
 // Get authorization URL
 const getAuthorizationUrl = (state) => {
-  const scope = 'user-read-currently-playing user-read-playback-state user-read-recently-played';
+  const scope = 'user-read-currently-playing user-read-playback-state user-read-recently-played user-modify-playback-state';
   return 'https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
@@ -310,5 +357,6 @@ module.exports = {
   monitorCurrentlyPlaying,
   startMonitoring,
   getAuthorizationUrl,
-  getCachedData
+  getCachedData,
+  skipToNextTrack
 };

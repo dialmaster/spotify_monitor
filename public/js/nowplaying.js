@@ -9,6 +9,50 @@ document.addEventListener('DOMContentLoaded', () => {
   const noHistoryEl = document.getElementById('no-history');
   const historyListEl = document.getElementById('history-list');
 
+  // Create toast notification container
+  const toastContainerEl = document.createElement('div');
+  toastContainerEl.id = 'toast-container';
+  document.body.appendChild(toastContainerEl);
+
+  // Track displayed messages to prevent duplicates
+  const displayedToasts = new Set();
+
+  // Function to show toast notification
+  const showToast = (message, duration = 15000) => {
+    // Check if the same message is already being displayed
+    if (displayedToasts.has(message)) {
+      return; // Skip duplicate toast
+    }
+
+    // Add to displayed messages set
+    displayedToasts.add(message);
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+
+    // Add to container
+    toastContainerEl.appendChild(toast);
+
+    // Trigger animation
+    setTimeout(() => {
+      toast.classList.add('show');
+    }, 10);
+
+    // Remove after duration
+    setTimeout(() => {
+      toast.classList.remove('show');
+      toast.classList.add('hide');
+
+      // Remove from DOM after animation completes
+      setTimeout(() => {
+        toast.remove();
+        // Remove from set of displayed messages
+        displayedToasts.delete(message);
+      }, 500);
+    }, duration);
+  };
+
   // Track Elements
   const albumArtEl = document.getElementById('album-art');
   const trackNameEl = document.getElementById('track-name');
@@ -430,6 +474,18 @@ document.addEventListener('DOMContentLoaded', () => {
             explanation = match[1];
           }
         }
+      }
+
+      // Check if content was auto-skipped and show toast notification
+      if (data.autoSkipped === true && data.skipMessage) {
+        // Clean up the message to remove timestamp if present
+        const cleanMessage = data.skipMessage.replace(/\s*\[\d+\]$/, '');
+        showToast(cleanMessage);
+      }
+
+      // Add auto-skip notification if the track was skipped
+      if (data.level === 'BLOCK' && data.autoSkipped === true) {
+        explanation += ' \n\n⚠️ This content was automatically skipped due to your age settings.';
       }
 
       // Set the explanation text
