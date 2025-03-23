@@ -16,15 +16,14 @@ The app has different levels of functionality depending on which API keys you co
   - All basic features
   - Retrieve official lyrics directly from Spotify
   - Access podcast transcripts when available on Spotify
+  - Since this uses the actual lyrics from Spotify, it can more accurately distinguish between radio edits and original lyrics
   - Higher quality source material for age evaluations
 
 - **With Genius API Key**:
   - All basic features
   - Fetch and display lyrics for songs (through Genius)
   - Lyrics through Genius will not be as accurate as through Spotify
-  - Without this, lyrics may still be available but with lower success rate
-
-**NOTE**: If neither Genius API Key nor Spotify Web Cookies are provided, the app will be unable to fetch lyrics at all for display, this will also significantly lower the accuracy of AI age appropriateness evaluations.
+  - Without this, lyrics may still be available through Genius but with lower success rate
 
 - **With OpenAI API Key**:
   - All basic features

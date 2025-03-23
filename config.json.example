@@ -3,7 +3,7 @@
   "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
   "redirectUri": "http://localhost:8888/callback",
   "port": 8888,
-  "monitorInterval": 30000,
+  "monitorInterval": 10000,
   "geniusApiKey": "YOUR_GENIUS_API_KEY",
   "openAiApiKey": "YOUR_OPENAI_API_KEY",
   "ageEvaluation": {

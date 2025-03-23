@@ -8,6 +8,119 @@ const Genius = require('genius-lyrics');
 const OpenAI = require('openai');
 const puppeteer = require('puppeteer');
 
+// Browser pool for Puppeteer
+let browserPool = {
+  browser: null,
+  inUse: false,
+  lastUsed: 0,
+  maxIdleTime: 5 * 60 * 1000, // 5 minutes idle timeout
+  waitTimeout: 15000, // 15 seconds timeout for waiting on browser
+  async getBrowser() {
+    // Wait if browser is in use by another request
+    if (this.inUse) {
+      console.log('Browser is in use, waiting...');
+      let waitResolved = false;
+
+      await Promise.race([
+        new Promise(resolve => {
+          const checkInterval = setInterval(() => {
+            if (!this.inUse) {
+              clearInterval(checkInterval);
+              waitResolved = true;
+              resolve();
+            }
+          }, 500); // Check every 500ms
+        }),
+        new Promise((_, reject) => {
+          setTimeout(() => {
+            if (!waitResolved) {
+              reject(new Error('Timeout waiting for browser'));
+            }
+          }, this.waitTimeout);
+        })
+      ]).catch(err => {
+        console.error('Browser wait error:', err.message);
+        // Force release if timeout
+        this.inUse = false;
+      });
+    }
+
+    // Mark as in use
+    this.inUse = true;
+
+    // Check if browser exists and is not crashed
+    if (this.browser) {
+      try {
+        const pages = await this.browser.pages();
+        if (pages.length > 0) {
+          // Browser is alive, return it
+          this.lastUsed = Date.now();
+          // Close any extra pages to keep the browser clean
+          if (pages.length > 1) {
+            // Keep only the first page (about:blank)
+            for (let i = 1; i < pages.length; i++) {
+              await pages[i].close().catch(e => console.log('Error closing extra page:', e.message));
+            }
+            console.log(`Closed ${pages.length - 1} extra pages`);
+          }
+          return this.browser;
+        }
+      } catch (e) {
+        console.log('Existing browser instance crashed, creating a new one');
+        this.browser = null;
+      }
+    }
+
+    // Create new browser
+    console.log('Launching new Puppeteer browser instance');
+    this.browser = await puppeteer.launch({
+      headless: 'new',
+      args: [
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-setuid-sandbox',
+        '--no-sandbox',
+      ]
+    });
+
+    this.lastUsed = Date.now();
+    return this.browser;
+  },
+  async releaseBrowser() {
+    // Close all pages except the first one to free up resources
+    try {
+      if (this.browser) {
+        const pages = await this.browser.pages();
+        if (pages.length > 1) {
+          // Keep only the first page (about:blank)
+          for (let i = 1; i < pages.length; i++) {
+            await pages[i].close().catch(e => console.log('Error closing page on release:', e.message));
+          }
+          console.log(`Closed ${pages.length - 1} pages on release`);
+        }
+      }
+    } catch (e) {
+      console.error('Error closing pages on release:', e.message);
+    }
+
+    this.inUse = false;
+    this.lastUsed = Date.now();
+    console.log('Browser released back to pool');
+  },
+  async closeBrowserIfIdle() {
+    if (this.browser && !this.inUse && (Date.now() - this.lastUsed > this.maxIdleTime)) {
+      console.log('Closing idle browser instance');
+      await this.browser.close();
+      this.browser = null;
+    }
+  }
+};
+
+// Set up a periodic check to close idle browser instances
+setInterval(() => {
+  browserPool.closeBrowserIfIdle().catch(e => console.error('Error closing idle browser:', e));
+}, 60 * 1000); // Check every minute
+
 const app = express();
 
 // Middleware
@@ -483,20 +596,30 @@ const getSpotifyLyrics = async (trackUrl) => {
       return null;
     }
 
-    // Launch a browser
-    const browser = await puppeteer.launch({
-      headless: 'new', // Use the new headless mode
-      args: [
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-        '--disable-setuid-sandbox',
-        '--no-sandbox',
-      ]
-    });
+    // Get a browser from the pool
+    let browser;
+    try {
+      browser = await browserPool.getBrowser();
+    } catch (browserError) {
+      console.error('Failed to get browser from pool:', browserError.message);
+      return null;
+    }
 
     try {
       // Create a new page
       const page = await browser.newPage();
+
+      // Set performance optimizations
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        // Skip loading images, fonts, and other non-essential resources
+        const resourceType = req.resourceType();
+        if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      });
 
       // Parse and set cookies from the configuration
       const cookieStr = SPOTIFY_WEB_COOKIES;
@@ -510,21 +633,20 @@ const getSpotifyLyrics = async (trackUrl) => {
       // Set a realistic user agent
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
-      // Navigate to the Spotify track URL
+      // Navigate to the Spotify track URL with reduced timeout
       console.log('Navigating to Spotify track page...');
-      await page.goto(trackUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      await page.goto(trackUrl, {
+        waitUntil: 'domcontentloaded', // Use domcontentloaded instead of networkidle2 for faster loading
+        timeout: 15000
+      });
 
       // Log the current URL to see if we were redirected
       const currentUrl = page.url();
       console.log('Current page URL:', currentUrl);
-
-      // Take a screenshot for debugging (optional, uncomment if needed)
-      // await page.screenshot({ path: 'spotify-page.png' });
-
-      // Wait for lyrics container with timeout
       console.log('Waiting for lyrics container...');
       try {
-        await page.waitForSelector('div[data-testid="lyrics-container"]', { timeout: 10000 });
+        // This will wait until the selector appears or until the timeout (8000ms) is reached, whichever comes first
+        await page.waitForSelector('div[data-testid="lyrics-container"]', { timeout: 8000 });
         console.log('Lyrics container found!');
       } catch (e) {
         console.log('No lyrics container found within timeout:', e.message);
@@ -553,12 +675,14 @@ const getSpotifyLyrics = async (trackUrl) => {
 
         // If we found track info but no lyrics, the song might not have lyrics
         if (hasTrackInfo && !hasLoginForm) {
-          await browser.close();
+          await page.close().catch(e => console.log('Error closing page:', e.message));
+          await browserPool.releaseBrowser();
           return null; // No lyrics available for this track
         }
 
         // If we hit the login page or found nothing familiar, auth failed
-        await browser.close();
+        await page.close().catch(e => console.log('Error closing page:', e.message));
+        await browserPool.releaseBrowser();
         return null;
       }
 
@@ -583,8 +707,11 @@ const getSpotifyLyrics = async (trackUrl) => {
       const lineCount = lyrics.split('\n').length;
       console.log(`Successfully extracted ${lineCount} lines of lyrics from Spotify`);
 
-      // Close the browser
-      await browser.close();
+      // Close the page explicitly
+      await page.close().catch(e => console.log('Error closing page:', e.message));
+
+      // Release the browser back to the pool
+      await browserPool.releaseBrowser();
 
       // Return the lyrics if we found some
       if (lyrics && lyrics.trim().length > 0) {
@@ -595,7 +722,7 @@ const getSpotifyLyrics = async (trackUrl) => {
       }
     } catch (innerError) {
       console.error('Error during Puppeteer operation:', innerError.message);
-      await browser.close();
+      await browserPool.releaseBrowser();
       return null;
     }
   } catch (error) {
@@ -618,20 +745,30 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
       return null;
     }
 
-    // Launch a browser
-    const browser = await puppeteer.launch({
-      headless: 'new', // Use the new headless mode
-      args: [
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-        '--disable-setuid-sandbox',
-        '--no-sandbox',
-      ]
-    });
+    // Get a browser from the pool
+    let browser;
+    try {
+      browser = await browserPool.getBrowser();
+    } catch (browserError) {
+      console.error('Failed to get browser from pool:', browserError.message);
+      return null;
+    }
 
     try {
       // Create a new page
       const page = await browser.newPage();
+
+      // Set performance optimizations
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        // Skip loading images, fonts, and other non-essential resources
+        const resourceType = req.resourceType();
+        if (resourceType === 'image' || resourceType === 'font' || resourceType === 'media') {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      });
 
       // Parse and set cookies from the configuration
       const cookieStr = SPOTIFY_WEB_COOKIES;
@@ -647,13 +784,16 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
 
       // Navigate to the Spotify episode URL
       console.log('Navigating to Spotify episode page...');
-      await page.goto(episodeUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+      await page.goto(episodeUrl, {
+        waitUntil: 'networkidle2', // Need to use networkidle2 for podcast transcript pages
+        timeout: 30000
+      });
 
       // Log the current URL to see if we were redirected
       const currentUrl = page.url();
       console.log('Current page URL:', currentUrl);
 
-      // Take a screenshot for debugging (optional, uncomment if needed)
+      // For debugging
       // await page.screenshot({ path: 'spotify-podcast-page.png' });
 
       // Check if we're on a login page
@@ -663,65 +803,205 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
 
       if (hasLoginForm) {
         console.log('Login form detected - authentication may have failed');
-        await browser.close();
+        await page.close().catch(e => console.log('Error closing page:', e.message));
+        await browserPool.releaseBrowser();
         return null;
       }
 
-      // Check for the Transcript navigation link
+      // Check for the Transcript navigation link - try multiple selectors to find it
       const hasTranscriptLink = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll('a.e-9640-nav-bar-list-item')).some(
-          el => el.textContent.trim() === 'Transcript'
-        );
-      });
+        // Try different selectors that might contain the transcript link
+        const selectors = [
+          'a.e-9640-nav-bar-list-item', // Original selector
+          'button[role="tab"]', // Generic tab buttons
+          'li[role="presentation"] button', // List items with buttons
+          'div[role="tablist"] button', // Buttons in a tablist
+          'a[href*="transcript"]', // Links with transcript in the URL
+          'button:contains("Transcript")', // Buttons containing the text Transcript
+        ];
 
-      if (!hasTranscriptLink) {
-        console.log('No transcript link found - this podcast may not have a transcript');
-        await browser.close();
-        return null;
-      }
+        // Helper function to check if element contains 'Transcript' text
+        const hasTranscriptText = (el) => {
+          return el.textContent.trim().toLowerCase() === 'transcript';
+        };
 
-      // Click on the Transcript link
-      console.log('Clicking on Transcript tab...');
-      await page.evaluate(() => {
-        const transcriptLinks = Array.from(document.querySelectorAll('a.e-9640-nav-bar-list-item')).filter(
-          el => el.textContent.trim() === 'Transcript'
-        );
-        if (transcriptLinks.length > 0) {
-          transcriptLinks[0].click();
+        // Try each selector
+        for (const selector of selectors) {
+          try {
+            const elements = document.querySelectorAll(selector);
+            if (elements.length > 0) {
+              // Check each element in the collection
+              for (const el of elements) {
+                if (hasTranscriptText(el)) {
+                  console.log(`Found transcript link with selector: ${selector}`);
+                  return { found: true, selector };
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore errors from invalid selectors
+          }
         }
+
+        // Try a more general approach - find any clickable element with "Transcript" text
+        const allElements = document.querySelectorAll('a, button, div[role="button"]');
+        for (const el of allElements) {
+          if (hasTranscriptText(el)) {
+            return { found: true, general: true };
+          }
+        }
+
+        return { found: false };
       });
 
-      // Wait for transcript to load
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for content to load after clicking
+      console.log('Transcript link detection result:', hasTranscriptLink);
 
-      // Check for transcript container
-      console.log('Looking for transcript content...');
-      const hasTranscriptContainer = await page.evaluate(() => {
-        // Look for the div with a class beginning with NavBar__NavBarPage
-        const navBarPages = Array.from(document.querySelectorAll('div[class^="NavBar__NavBarPage"]'));
-        return navBarPages.length > 0;
-      });
+      if (!hasTranscriptLink.found) {
+        // Try to check the page content directly for transcript content
+        const hasTranscriptContent = await page.evaluate(() => {
+          // Look for elements that might contain transcript text
+          const transcript = document.body.innerText;
 
-      if (!hasTranscriptContainer) {
-        console.log('No transcript container found after clicking link');
-        await browser.close();
-        return null;
+          // Check if the page already has significant text content that might be a transcript
+          // (at least 20 lines with reasonable length)
+          const lines = transcript.split('\n').filter(line => line.trim().length > 10);
+          return lines.length > 20;
+        });
+
+        if (hasTranscriptContent) {
+          console.log('No transcript tab found, but page appears to contain transcript content directly');
+          // Continue to extract content
+        } else {
+          console.log('No transcript link or content found - this podcast may not have a transcript');
+          await page.close().catch(e => console.log('Error closing page:', e.message));
+          await browserPool.releaseBrowser();
+          return null;
+        }
+      } else {
+        // If we found a transcript link/tab, click it
+        console.log('Clicking on Transcript tab...');
+        await page.evaluate(() => {
+          // Helper function to find transcript element
+          function findTranscriptElement() {
+            const selectors = [
+              'a.e-9640-nav-bar-list-item',
+              'button[role="tab"]',
+              'li[role="presentation"] button',
+              'div[role="tablist"] button',
+              'a[href*="transcript"]'
+            ];
+
+            // Try each selector
+            for (const selector of selectors) {
+              const elements = document.querySelectorAll(selector);
+              for (const el of elements) {
+                if (el.textContent.trim().toLowerCase() === 'transcript') {
+                  return el;
+                }
+              }
+            }
+
+            // Try general approach
+            const allElements = document.querySelectorAll('a, button, div[role="button"]');
+            for (const el of allElements) {
+              if (el.textContent.trim().toLowerCase() === 'transcript') {
+                return el;
+              }
+            }
+
+            return null;
+          }
+
+          const transcriptEl = findTranscriptElement();
+          if (transcriptEl) {
+            transcriptEl.click();
+            return true;
+          }
+          return false;
+        });
+
+        // Wait for transcript to load
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
-      // Extract transcript content
-      console.log('Extracting transcript...');
+      // Try to find transcript content - check multiple potential containers
+      console.log('Looking for transcript content...');
       const transcript = await page.evaluate(() => {
-        // Find the NavBar__NavBarPage container
-        const navBarPages = Array.from(document.querySelectorAll('div[class^="NavBar__NavBarPage"]'));
-        if (navBarPages.length === 0) return null;
+        // Try various selectors that might contain transcript content
+        const possibleContainers = [
+          // Original selector
+          'div[class^="NavBar__NavBarPage"]',
 
-        const container = navBarPages[0];
+          // Generic content containers
+          'div[class*="transcript"]',
+          'div[class*="Transcript"]',
+          'div[data-testid*="transcript"]',
 
-        // Get all text spans within the container
-        const textSpans = Array.from(container.querySelectorAll('span[data-encore-id="text"][dir="auto"]'));
+          // Try parent containers of text spans
+          'div.Narrative__Container',
+          'div[class*="narrative"]',
 
-        // Extract and join the text content
-        return textSpans.map(el => el.textContent.trim()).join('\n');
+          // Most generic - any large text container
+          'main',
+          'article',
+          'section'
+        ];
+
+        // Try each container selector
+        for (const selector of possibleContainers) {
+          try {
+            const containers = document.querySelectorAll(selector);
+            if (containers.length > 0) {
+              // For each potential container
+              for (const container of containers) {
+                // Try different text element selectors
+                const textSelectors = [
+                  'span[data-encore-id="text"][dir="auto"]',
+                  'p',
+                  'span.Type__TypeElement',
+                  'div[class*="text"]',
+                  'span',
+                  'div'
+                ];
+
+                for (const textSelector of textSelectors) {
+                  const textElements = container.querySelectorAll(textSelector);
+                  if (textElements.length > 10) { // Need a reasonable number of text elements
+                    const text = Array.from(textElements)
+                      .map(el => el.textContent.trim())
+                      .filter(text => text.length > 0) // Filter out empty strings
+                      .join('\n');
+
+                    // Check if we have enough text
+                    if (text.length > 200) {
+                      return text;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore errors from invalid selectors
+          }
+        }
+
+        // If all selectors failed, try a more aggressive approach - get all text from the page
+        try {
+          // Get all paragraphs and spans with substantial text
+          const allTextElements = document.querySelectorAll('p, span.Type__TypeElement, div[class*="text"] > span');
+          const text = Array.from(allTextElements)
+            .map(el => el.textContent.trim())
+            .filter(text => text.length > 5) // Only include non-trivial text
+            .join('\n');
+
+          if (text.length > 200) {
+            return text;
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+
+        return null;
       });
 
       // Log stats and limit to 5000 characters
@@ -729,18 +1009,20 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
         const truncatedTranscript = transcript.substring(0, 5000);
         const originalLength = transcript.length;
         const lineCount = transcript.split('\n').length;
-        console.log(`Successfully extracted transcript (${lineCount} lines, ${originalLength} chars, truncated to 4000 chars)`);
+        console.log(`Successfully extracted transcript (${lineCount} lines, ${originalLength} chars, truncated to 5000 chars)`);
 
-        await browser.close();
+        await page.close().catch(e => console.log('Error closing page:', e.message));
+        await browserPool.releaseBrowser();
         return truncatedTranscript;
       } else {
         console.log('No transcript content found');
-        await browser.close();
+        await page.close().catch(e => console.log('Error closing page:', e.message));
+        await browserPool.releaseBrowser();
         return null;
       }
     } catch (innerError) {
       console.error('Error during Puppeteer operation:', innerError.message);
-      await browser.close();
+      await browserPool.releaseBrowser();
       return null;
     }
   } catch (error) {
@@ -823,43 +1105,24 @@ app.get('/api/lyrics', async (req, res) => {
     // Fall back to Genius if Spotify methods failed or weren't attempted
     console.log(`Using Genius API key: ${GENIUS_API_KEY ? 'Yes (configured)' : 'No (falling back to scraping)'}`);
 
-    // Without Genius API key, we can't perform lyrics search
-    if (!GENIUS_API_KEY) {
-      console.log('No Genius API key configured.');
+    // Initialize Genius client with API key
+    const geniusClient = new Genius.Client(GENIUS_API_KEY);
 
-      // If we also don't have Spotify web cookies, we can't get lyrics at all
-      if (!SPOTIFY_WEB_COOKIES) {
-        console.log('No Spotify web cookies configured either.');
-        console.log('To enable lyrics fetching:');
-        console.log('1. Add a Genius API key to your config.json, or');
-        console.log('2. Add Spotify web cookies to your config.json');
-
-        return res.json({
-          lyrics: null,
-          error: 'No lyrics sources available. Configure either Genius API key or Spotify cookies.',
-          suggestion: 'See config.json.example for setup instructions'
-        });
-      }
-
-      // If we already tried Spotify and it failed, just return no lyrics
-      return res.json({
-        lyrics: null,
-        error: 'No lyrics found'
-      });
-    }
-
-    // Initialize Genius client exactly as shown in docs
+    // Initialize Genius client if API key is available
     try {
-      const geniusClient = new Genius.Client(GENIUS_API_KEY);
-
-      // Search for the song
+      // Search for the song using the API
       const searches = await geniusClient.songs.search(`${title} ${artist}`);
 
       // If no results found
       if (!searches || searches.length === 0) {
         console.log('No lyrics found');
-        return res.json({ lyrics: null });
+        return res.json({
+            lyrics: null,
+            error: 'Could not find lyrics. Consider configuring Genius API key or Spotify cookies for better results.',
+            suggestion: 'See config.json.example for setup instructions'
+          });
       }
+
 
       // Get the first search result
       const song = searches[0];
@@ -869,15 +1132,16 @@ app.get('/api/lyrics', async (req, res) => {
       lyrics = await song.lyrics();
       source = 'genius';
 
+      console.log('Successfully fetched lyrics from Genius');
       res.json({
         lyrics,
         title: song.title,
         artist: song.artist.name,
-        image: song.image,
         source,
         url: song.url,
         sourceDetail: 'Lyrics from Genius (third-party lyrics database)'
       });
+
     } catch (searchError) {
       console.error('Genius search/lyrics error:', searchError.message);
       return res.json({
@@ -1070,6 +1334,30 @@ app.get('/cookies-help', (req, res) => {
   res.render('cookies-help');
 });
 
+// Function to preload Puppeteer browser
+const preloadPuppeteerBrowser = async () => {
+  if (SPOTIFY_WEB_COOKIES) {
+    try {
+      console.log('Preloading Puppeteer browser...');
+      const browser = await browserPool.getBrowser();
+      console.log('Puppeteer browser preloaded successfully');
+
+      // Create and maintain a single blank page to keep browser warm
+      const pages = await browser.pages();
+      if (pages.length === 0) {
+        await browser.newPage();
+      }
+
+      // Release browser back to pool
+      await browserPool.releaseBrowser();
+    } catch (error) {
+      console.error('Failed to preload Puppeteer browser:', error.message);
+    }
+  } else {
+    console.log('Skipping Puppeteer preload as no Spotify web cookies are configured');
+  }
+};
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
@@ -1082,4 +1370,7 @@ app.listen(PORT, () => {
     console.log(`Custom age evaluation instructions: "${AGE_EVALUATION_CONFIG.customInstructions}"`);
   }
   console.log(`To authorize Spotify, open http://localhost:${PORT} in your browser`);
+
+  // Preload the browser after server starts
+  preloadPuppeteerBrowser();
 });

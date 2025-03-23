@@ -854,11 +854,11 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchCurrentlyPlaying();
   fetchRecentlyPlayed();
 
-  // Refresh currently playing data every 30 seconds
-  setInterval(fetchCurrentlyPlaying, 30000);
+  // Refresh currently playing data every 7 seconds
+  setInterval(fetchCurrentlyPlaying, 7000);
 
-  // Refresh history data every 5 minutes (300,000 ms)
-  historyRefreshInterval = setInterval(fetchRecentlyPlayed, 300000);
+  // Refresh history data every 4 minutes (240,000 ms)
+  historyRefreshInterval = setInterval(fetchRecentlyPlayed, 240000);
 
   // Clear cache on page unload
   window.addEventListener('beforeunload', () => {
