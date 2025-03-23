@@ -777,7 +777,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Attempt to fetch podcast transcript if we have a Spotify URL
       if (data.item.external_urls && data.item.external_urls.spotify) {
         fetchAndDisplayTranscript(data.item.name, data.item.external_urls.spotify);
-        // Remove the direct age evaluation call - it will be called after transcript fetch
       } else {
         // If no Spotify URL, we can't fetch transcript, so evaluate without it
         fetchAndDisplayAgeEvaluation(data.item, 'episode', null, null, null);

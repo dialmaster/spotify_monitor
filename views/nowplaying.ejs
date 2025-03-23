@@ -240,7 +240,10 @@
 <body>
   <div class="container">
     <header>
-      <h1>Spotify Monitor</h1>
+      <div class="logo-container">
+        <img src="/img/spotify-icon.png" alt="Logo" class="header-logo">
+        <h1>Spotify Monitor</h1>
+      </div>
     </header>
 
     <div id="now-playing-container">
@@ -258,18 +261,22 @@
           <img id="album-art" src="" alt="Album Art">
         </div>
         <div class="info-container">
-          <h2 id="track-name"></h2>
-          <a id="spotify-track-link" href="#" target="_blank" class="spotify-link hidden">
-            <img src="/img/spotify-icon.png" alt="Spotify" class="spotify-icon"> Open in Spotify
-          </a>
-          <h3 id="artist-name"></h3>
-          <p id="album-name"></p>
+          <h2>
+            <span id="track-name"></span>
+            <a id="spotify-track-link" href="#" target="_blank" class="spotify-link hidden">
+              <img src="/img/spotify-icon.png" alt="Spotify" class="spotify-icon"> Open in Spotify
+            </a>
+          </h2>
+          <div class="artist-album-container">
+            <h3 id="artist-name"></h3>
+            <p id="album-name"></p>
+          </div>
           <div class="progress-container">
             <div class="progress-bar">
               <div id="progress-bar-fill"></div>
-            </div>
-            <div class="time-display">
-              <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+              <div class="time-display">
+                <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+              </div>
             </div>
           </div>
           <div class="info-section">
@@ -280,9 +287,6 @@
               <div id="lyrics-not-found" class="hidden">Lyrics not found</div>
               <div id="lyrics-source" class="hidden">
                 <a id="lyrics-source-link" href="#" target="_blank">View source</a>
-              </div>
-              <div class="lyrics-help" style="margin-top: 0.5rem; font-size: 0.8rem;">
-                <a href="/cookies-help" target="_blank">Learn how to set up Spotify cookies for better lyrics fetching</a>
               </div>
             </div>
 
@@ -308,19 +312,21 @@
           <img id="podcast-art" src="" alt="Podcast Art">
         </div>
         <div class="info-container">
-          <h2 id="podcast-name"></h2>
+          <h2>
+            <span id="podcast-name"></span>
+            <a id="spotify-podcast-link" href="#" target="_blank" class="spotify-link hidden">
+              <img src="/img/spotify-icon.png" alt="Spotify" class="spotify-icon"> Open in Spotify
+            </a>
+          </h2>
           <h3 id="episode-name"></h3>
-          <a id="spotify-podcast-link" href="#" target="_blank" class="spotify-link hidden">
-            <img src="/img/spotify-icon.png" alt="Spotify" class="spotify-icon"> Open in Spotify
-          </a>
           <p id="release-date"></p>
           <p id="episode-description" class="description"></p>
           <div class="progress-container">
             <div class="progress-bar">
               <div id="podcast-progress-bar-fill"></div>
-            </div>
-            <div class="time-display">
-              <span id="podcast-current-time">0:00</span> / <span id="podcast-total-time">0:00</span>
+              <div class="time-display">
+                <span id="podcast-current-time">0:00</span> / <span id="podcast-total-time">0:00</span>
+              </div>
             </div>
           </div>
 
@@ -332,9 +338,6 @@
               <div id="podcast-transcript-not-found" class="hidden">Transcript not available</div>
               <div id="podcast-transcript-source" class="hidden">
                 <a id="podcast-transcript-source-link" href="#" target="_blank">View source</a>
-              </div>
-              <div class="transcript-help" style="margin-top: 0.5rem; font-size: 0.8rem;">
-                <a href="/cookies-help" target="_blank">Learn how to set up Spotify cookies for better transcript fetching</a>
               </div>
             </div>
 
