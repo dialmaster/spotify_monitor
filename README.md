@@ -115,6 +115,7 @@ The app has different levels of functionality depending on which API keys you co
    - Open developer tools (F12 or right-click > Inspect)
    - Go to the Console tab and type `document.cookie` and press Enter
    - Copy the entire cookie string and paste it into your config.json for the `spotifyWebCookies` value
+   - Note that the following cookies are REQUIRED: `sp_dc`, `sp_t`, `sp_adid`, `sp_gaid`, and `sp_key`
    - Without these cookies, direct lyrics retrieval from Spotify won't work
 
 6. **Install dependencies**:
