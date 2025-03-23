@@ -1,6 +1,7 @@
 {
   "clientId": "YOUR_SPOTIFY_CLIENT_ID",
   "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
+  "spotifyUserName": "YOUR_SPOTIFY_USERNAME",
   "redirectUri": "http://localhost:8888/callback",
   "port": 8888,
   "autoSkipBlocked": true,

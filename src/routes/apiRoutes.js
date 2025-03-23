@@ -3,6 +3,7 @@ const router = express.Router();
 const spotifyService = require('../services/spotifyService');
 const lyricsService = require('../services/lyricsService');
 const ageEvaluationService = require('../services/ageEvaluationService');
+const logService = require('../services/logService');
 const config = require('../config');
 
 // API endpoint to get currently playing
@@ -168,6 +169,18 @@ router.post('/age-evaluation', async (req, res) => {
       id, type, title, artist, description, lyrics, lyricsSource, spotifyUrl
     });
 
+    // Log the evaluation to file
+    // Create a mock item object that contains the minimum information needed for logging
+    const item = {
+      id,
+      name: title,
+      artists: artist ? [{ name: artist }] : undefined,
+      show: type === 'episode' && title ? { name: title.split(' - ')[0] } : undefined
+    };
+
+    // Log the evaluation results
+    logService.logAgeEvaluation(item, evaluation);
+
     // Check if content is blocked and auto-skip is enabled
     if (config.autoSkipBlocked && evaluation.level === 'BLOCK') {
       console.log(`Content "${title}" rated as BLOCK level. Auto-skip is enabled, attempting to skip...`);
@@ -186,6 +199,9 @@ router.post('/age-evaluation', async (req, res) => {
         if (skipResult) {
           evaluation.skipMessage = `"${title}" was auto-skipped due to AI content evaluation. [${Date.now()}]`;
           console.log(`Auto-skipped "${title}" due to BLOCK rating`);
+
+          // Log the auto-skip to file
+          logService.logAutoSkip(currentPlayback.item, 'BLOCK rating from age evaluation');
         } else {
           console.log(`Failed to auto-skip "${title}" despite BLOCK rating`);
         }

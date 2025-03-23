@@ -9,6 +9,7 @@ Spotify Account Monitor is a comprehensive web application that allows parents a
 - **Content Evaluation**: Leverages OpenAI's API to provide age appropriateness evaluations for both music and podcast content based on configurable age thresholds
 - **Safety Controls**: Includes auto-skip capability for inappropriate content and supports monitoring multiple accounts
 - **User Experience**: Maintains a sleek, user-friendly interface that updates automatically without requiring page refreshes
+- **Activity Logging**: Automatically creates detailed logs of all playback activity, age evaluations, and content blocks for review and record-keeping
 
 This tool helps parents make informed decisions about their children's music and podcast consumption while providing a seamless monitoring experience.
 
@@ -99,13 +100,15 @@ The app has different levels of functionality depending on which API keys you co
        "listenerAge": 13,
        "customInstructions": "Optional custom instructions for age evaluation"
      },
-     "spotifyWebCookies": "COOKIES_FROM_SPOTIFY_WEB_PLAYER"
+     "spotifyWebCookies": "COOKIES_FROM_SPOTIFY_WEB_PLAYER",
+     "spotifyUserName": "YOUR_SPOTIFY_USERNAME"
    }
    ```
    - If you don't want to use a specific feature, you can leave its API key as the example value or remove it
    - The app will automatically disable features for which valid API keys aren't provided
    - You can adjust the `monitorInterval` value (in milliseconds) to change how often the app checks what's playing
    - Set `autoSkipBlocked` to `true` to automatically skip tracks that are rated as blocked by the age evaluation
+   - The `spotifyUserName` is used to create separate log files for each monitored account (format: username_playback.log)
 
 5. **Get Spotify Web Cookies (Optional but recommended for best lyrics/transcript retrieval)**:
    - Log in to [Spotify Web Player](https://open.spotify.com/) in your browser
@@ -150,6 +153,7 @@ To monitor different Spotify accounts:
    {
      "clientId": "YOUR_SPOTIFY_CLIENT_ID",
      "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
+     "spotifyUserName": "YOUR_SPOTIFY_USERNAME",
      "redirectUri": "http://localhost:8889/callback",
      "port": 8889,
      "autoSkipBlocked": true,
@@ -173,6 +177,7 @@ To monitor different Spotify accounts:
 - Automatically skips tracks/podcasts rated as blocked based on age settings (optional feature)
 - Displays toast notifications when content is automatically skipped
 - Supports monitoring different accounts using different config files
+- Logs all playback activity, age evaluations, and content blocks to log files for review
 
 ## Troubleshooting
 
@@ -204,6 +209,7 @@ spotify_monitor/
     ├── services/          # Business logic
     │   ├── ageEvaluationService.js  # Content age evaluation
     │   ├── lyricsService.js         # Lyrics and transcripts
+    │   ├── logService.js            # Activity logging
     │   └── spotifyService.js        # Spotify API interaction
     └── utils/             # Utility functions
         └── browserPool.js # Puppeteer browser management

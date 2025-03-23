@@ -1,6 +1,7 @@
 const axios = require('axios');
 const querystring = require('querystring');
 const config = require('../config');
+const logService = require('./logService');
 
 // Helper function to generate a random string for state
 const generateRandomString = (length) => {
@@ -275,6 +276,8 @@ const monitorCurrentlyPlaying = async () => {
 
     if (!data.playing) {
       console.log(`[${timestamp}] Nothing is currently playing`);
+      // Clean up tracking when nothing is playing
+      logService.cleanupTracking(null);
       return;
     }
 
@@ -283,6 +286,9 @@ const monitorCurrentlyPlaying = async () => {
     if (data.type === 'track' && data.item) {
       const duration = Math.floor(data.item.duration_ms / 1000);
       console.log(`[${timestamp}] Now playing: ${data.item.name} by ${data.item.artists.map(artist => artist.name).join(', ')} (${progress}s / ${duration}s)`);
+
+      // Log playback to file (will only log new tracks)
+      logService.logPlaybackStarted(data.item, 'track');
     } else if (data.type === 'episode') {
       if (data.item) {
         const duration = Math.floor(data.item.duration_ms / 1000);
@@ -290,6 +296,9 @@ const monitorCurrentlyPlaying = async () => {
         const episodeName = data.item.name || 'Unknown Episode';
         const releaseDate = data.item.release_date || 'Unknown Date';
         console.log(`[${timestamp}] Now playing podcast: ${showName} - ${episodeName} (Released: ${releaseDate}) (${progress}s / ${duration}s)`);
+
+        // Log podcast playback to file (will only log new episodes)
+        logService.logPlaybackStarted(data.item, 'episode');
 
         // Log description if available
         if (data.item.description) {

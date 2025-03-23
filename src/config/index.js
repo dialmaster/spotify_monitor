@@ -41,6 +41,9 @@ const config = {
   clientSecret: rawConfig.clientSecret,
   redirectUri: rawConfig.redirectUri || 'http://localhost:8888/callback',
 
+  // Spotify username (for file naming)
+  spotifyUserName: rawConfig.spotifyUserName || 'spotify_user',
+
   // App settings
   monitorInterval: rawConfig.monitorInterval || 30000, // Default 30 seconds
   port: rawConfig.port || 8888,
