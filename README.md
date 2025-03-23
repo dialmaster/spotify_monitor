@@ -1,6 +1,16 @@
 # Spotify Account Monitor
 
-Spotify Account Monitor is a comprehensive web application that allows parents and guardians to track and monitor Spotify listening activity in real-time. The app displays currently playing tracks or podcasts with detailed information including album art, artists, playback progress, and recently played content. It features lyrics retrieval via the Spotify or the Genius API, enabling users to review song content, and leverages OpenAI's API to provide age appropriateness evaluations for both music and podcast content based on configurable age thresholds. With customizable monitoring intervals, auto-skip capability for inappropriate content, and multi-account support, this tool helps parents make informed decisions about their children's music and podcast consumption while maintaining a sleek, user-friendly interface that updates automatically without requiring page refreshes.
+Spotify Account Monitor is a comprehensive web application that allows parents and guardians to track and monitor Spotify listening activity in real-time.
+
+## Key Features
+
+- **Real-time Monitoring**: Displays currently playing tracks or podcasts with detailed information including album art, artists, playback progress, and recently played content
+- **Lyrics Analysis**: Retrieves lyrics via Spotify or the Genius API, enabling users to review song content
+- **Content Evaluation**: Leverages OpenAI's API to provide age appropriateness evaluations for both music and podcast content based on configurable age thresholds
+- **Safety Controls**: Includes auto-skip capability for inappropriate content and supports monitoring multiple accounts
+- **User Experience**: Maintains a sleek, user-friendly interface that updates automatically without requiring page refreshes
+
+This tool helps parents make informed decisions about their children's music and podcast consumption while providing a seamless monitoring experience.
 
 ## Feature Availability Based on Configuration
 
