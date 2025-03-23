@@ -167,3 +167,28 @@ To monitor different Spotify accounts:
 - If lyrics aren't showing up, verify your Genius API key or Spotify Web Cookies are correct
 - For puppeteer issues on Linux, ensure you've installed the required dependencies: `sudo apt-get install -y libgbm1`
 - Make sure you're using the same browser for the app where you're already logged into Spotify
+
+## Project Structure
+
+
+```
+spotify_monitor/
+├── app.js                 # Main entry point
+├── package.json           # Dependencies and scripts
+├── public/                # Static assets (CSS, JS, images)
+├── views/                 # EJS templates
+└── src/                   # Source code
+    ├── app.js             # Application setup and server initialization
+    ├── config/            # Configuration loading and validation
+    │   └── index.js
+    ├── routes/            # Express routes
+    │   ├── apiRoutes.js   # API endpoints
+    │   ├── authRoutes.js  # Authentication routes
+    │   └── webRoutes.js   # Web page routes
+    ├── services/          # Business logic
+    │   ├── ageEvaluationService.js  # Content age evaluation
+    │   ├── lyricsService.js         # Lyrics and transcripts
+    │   └── spotifyService.js        # Spotify API interaction
+    └── utils/             # Utility functions
+        └── browserPool.js # Puppeteer browser management
+```

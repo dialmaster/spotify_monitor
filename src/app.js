@@ -1,0 +1,54 @@
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const config = require('./config');
+const browserPool = require('./utils/browserPool');
+
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+const apiRoutes = require('./routes/apiRoutes');
+const webRoutes = require('./routes/webRoutes');
+
+// Create Express app
+const app = express();
+
+// Middleware
+app.use(express.static(path.join(__dirname, '../public')))
+   .use(cookieParser())
+   .use(express.json({ limit: '5mb' }));
+
+// Set up EJS as the view engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '../views'));
+
+// Apply routes
+app.use('/', webRoutes);
+app.use('/', authRoutes);
+app.use('/api', apiRoutes);
+
+// Start the server
+const server = app.listen(config.port, () => {
+  console.log(`Server running at http://localhost:${config.port}`);
+  console.log(`Using config file: ${config.getConfigPath()}`);
+  console.log(`Genius API key configured: ${config.hasGeniusLyrics() ? 'Yes' : 'No (lyrics functionality may be limited)'}`);
+  console.log(`OpenAI API key configured: ${config.hasAgeEvaluation() ? 'Yes' : 'No (age evaluation disabled)'}`);
+  console.log(`Spotify Web cookies configured: ${config.hasSpotifyWebAccess() ? 'Yes' : 'No (Spotify lyrics/transcripts disabled)'}`);
+  console.log(`Age evaluation configured for listener age: ${config.ageEvaluation.listenerAge}`);
+  if (config.ageEvaluation.customInstructions) {
+    console.log(`Custom age evaluation instructions: "${config.ageEvaluation.customInstructions}"`);
+  }
+  console.log(`To authorize Spotify, open http://localhost:${config.port} in your browser`);
+
+  // Start browser pool idle checking
+  browserPool.startIdleChecking();
+
+  // Preload the browser if we have Spotify web access configured
+  if (config.hasSpotifyWebAccess()) {
+    browserPool.preloadBrowser();
+  } else {
+    console.log('Skipping Puppeteer preload as no Spotify web cookies are configured');
+  }
+});
+
+// Export the app and server for testing
+module.exports = { app, server };
