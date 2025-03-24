@@ -224,6 +224,7 @@ spotify_monitor/
     │   └── webRoutes.js   # Web page routes
     ├── services/          # Business logic
     │   ├── ageEvaluationService.js  # Content age evaluation
+    │   ├── callMeBotService.js      # Signal notifications
     │   ├── lyricsService.js         # Lyrics and transcripts
     │   ├── logService.js            # Activity logging
     │   └── spotifyService.js        # Spotify API interaction
