@@ -160,30 +160,30 @@ const sendBlockNotification = async (item, evaluation, autoSkipped) => {
 
   try {
     // Format track information
-    let message = 'BLOCKED CONTENT ALERT: ';
+    const username = config.spotifyUserName || 'unknown';
+    let message = `BLOCKED CONTENT ALERT FOR USER ${username}: `;
 
     if (item.type === 'track' || item.artists) {
       // Format for track
       const artistNames = item.artists.map(artist => artist.name).join(', ');
-      message += `Track: "${item.name}".`;
-      message += `Artist: ${artistNames}.`;
+      message += `Track: "${item.name}". `;
+      message += `Artist: ${artistNames}. `;
 
       if (item.album && item.album.name) {
-        message += `Album: "${item.album.name}".`;
+        message += `Album: "${item.album.name}". `;
       }
     } else if (item.type === 'episode' || item.show) {
       // Format for podcast episode
       const showName = item.show?.name || 'Unknown Show';
-      message += `Podcast: "${showName}".`;
-      message += `Episode: "${item.name}".`;
+      message += `Podcast: "${showName}". `;
+      message += `Episode: "${item.name}". `;
     } else {
-      message += `Content: "${item.name}".`;
+      message += `Content: "${item.name}". `;
     }
 
     // Add age level information
     if (evaluation) {
-      message += `Age Rating: ${evaluation.ageRating}.`;
-      message += `Level: ${evaluation.level}.`;
+      message += `Age Rating: ${evaluation.ageRating}. `;
 
       // Add reasoning if available
       if (evaluation.explanation) {
@@ -192,12 +192,12 @@ const sendBlockNotification = async (item, evaluation, autoSkipped) => {
           .replace(/\s\s+/g, ' ')
           .trim();
 
-        message += `Reasoning: ${cleanExplanation}`;
+        message += `Reasoning: ${cleanExplanation} `;
       }
     }
 
     // Add auto-skip status
-    message += ` Auto-Skipped: ${autoSkipped ? 'Yes' : 'No'}.`;
+    message += `Auto-Skipped: ${autoSkipped ? 'Yes' : 'No'}.`;
 
     // Send notification
     await callMeBotService.sendSignalNotification(message);
