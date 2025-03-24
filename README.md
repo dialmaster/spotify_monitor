@@ -90,6 +90,7 @@ The app has different levels of functionality depending on which API keys you co
    - The URL will look like: `https://signal.callmebot.com/signal/send.php?phone=<PHONE_OR_UUID>&apikey=<YOUR_API_KEY>&text=This+is+a+test`
    - Copy the URL **without** the `&text=This+is+a+test` part to use in your config
    - Without this API URL, notification alerts will only appear in the web interface
+   - See additional information: https://www.callmebot.com/blog/free-api-signal-send-messages/
 
 5. **Configure the application**:
    - **NOTE**: You can use multiple config files with different port values and clientId/secret to run multiple instances side-by-side!
@@ -202,7 +203,6 @@ The app has different levels of functionality depending on which API keys you co
 - If you need to authenticate again, visit `http://localhost:8888/login` in your browser
 - If age evaluation isn't working, check that you've provided a valid OpenAI API key in your config file
 - If lyrics aren't showing up, verify your Genius API key or Spotify Web Cookies are correct
-- For puppeteer issues on Linux, ensure you've installed the required dependencies: `sudo apt-get install -y libgbm1`
 - Make sure you're using the same browser for the app where you're already logged into Spotify
 
 ## Project Structure
