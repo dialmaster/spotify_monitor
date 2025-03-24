@@ -8,6 +8,7 @@ const isPlaceholderValue = (value) => {
     'YOUR_SPOTIFY_CLIENT_SECRET',
     'YOUR_GENIUS_API_KEY',
     'YOUR_OPENAI_API_KEY',
+    'YOUR_CALLMEBOT_API_URL',
     'PASTE_YOUR_COOKIES_HERE',
     'COOKIES_FROM_SPOTIFY_WEB_PLAYER'
   ];
@@ -49,6 +50,10 @@ const config = {
   port: 8888,
   autoSkipBlocked: rawConfig.autoSkipBlocked === true, // Default to false unless explicitly set to true
 
+  callMeBotUrl: typeof rawConfig.callMeBotUrl === 'string' && !isPlaceholderValue(rawConfig.callMeBotUrl)
+    ? rawConfig.callMeBotUrl
+    : undefined,
+
   // Genius API key - ensure it's a valid string
   geniusApiKey: typeof rawConfig.geniusApiKey === 'string' && !isPlaceholderValue(rawConfig.geniusApiKey)
     ? rawConfig.geniusApiKey
@@ -80,6 +85,10 @@ const config = {
 
   hasSpotifyWebAccess: function() {
     return !!this.spotifyWebCookies;
+  },
+
+  hasCallMeBot: function() {
+    return !!this.callMeBotUrl;
   },
 
   getConfigPath: function() {

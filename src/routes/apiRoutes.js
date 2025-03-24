@@ -201,7 +201,7 @@ router.post('/age-evaluation', async (req, res) => {
           console.log(`Auto-skipped "${title}" due to BLOCK rating`);
 
           // Log the auto-skip to file
-          logService.logAutoSkip(currentPlayback.item, 'BLOCK rating from age evaluation');
+          logService.logAutoSkip(currentPlayback.item, 'BLOCK rating from age evaluation', evaluation);
         } else {
           console.log(`Failed to auto-skip "${title}" despite BLOCK rating`);
         }

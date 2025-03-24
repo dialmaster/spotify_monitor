@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
+const callMeBotService = require('./callMeBotService');
 
 // Map to track currently playing items to avoid duplicate logging
 let trackingMap = new Map();
@@ -124,9 +125,10 @@ const logAgeEvaluation = (item, evaluation) => {
  *
  * @param {Object} item - The track or episode object from Spotify API
  * @param {String} reason - Reason for skipping
+ * @param {Object} evaluation - The age evaluation results (optional)
  * @returns {Boolean} - Whether the log was written
  */
-const logAutoSkip = (item, reason = 'BLOCK rating') => {
+const logAutoSkip = (item, reason = 'BLOCK rating', evaluation = null) => {
   if (!item || !item.id) return false;
 
   const timestamp = new Date().toISOString();
@@ -138,7 +140,71 @@ const logAutoSkip = (item, reason = 'BLOCK rating') => {
   fs.appendFileSync(logFile, logMessage + '\n');
   console.log(`Logged auto-skip to ${logFile}`);
 
+  // Send notification for blocked content that was auto-skipped
+  if (reason.includes('BLOCK')) {
+    sendBlockNotification(item, evaluation, true);
+  }
+
   return true;
+};
+
+/**
+ * Send a Signal notification for blocked content
+ *
+ * @param {Object} item - The track or episode object from Spotify API
+ * @param {Object} evaluation - The age evaluation results (optional)
+ * @param {Boolean} autoSkipped - Whether the content was auto-skipped
+ */
+const sendBlockNotification = async (item, evaluation, autoSkipped) => {
+  if (!item || !item.id) return;
+
+  try {
+    // Format track information
+    let message = 'BLOCKED CONTENT ALERT: ';
+
+    if (item.type === 'track' || item.artists) {
+      // Format for track
+      const artistNames = item.artists.map(artist => artist.name).join(', ');
+      message += `Track: "${item.name}".`;
+      message += `Artist: ${artistNames}.`;
+
+      if (item.album && item.album.name) {
+        message += `Album: "${item.album.name}".`;
+      }
+    } else if (item.type === 'episode' || item.show) {
+      // Format for podcast episode
+      const showName = item.show?.name || 'Unknown Show';
+      message += `Podcast: "${showName}".`;
+      message += `Episode: "${item.name}".`;
+    } else {
+      message += `Content: "${item.name}".`;
+    }
+
+    // Add age level information
+    if (evaluation) {
+      message += `Age Rating: ${evaluation.ageRating}.`;
+      message += `Level: ${evaluation.level}.`;
+
+      // Add reasoning if available
+      if (evaluation.explanation) {
+        const cleanExplanation = evaluation.explanation
+          .replace(/\n/g, ' ')
+          .replace(/\s\s+/g, ' ')
+          .trim();
+
+        message += `Reasoning: ${cleanExplanation}`;
+      }
+    }
+
+    // Add auto-skip status
+    message += ` Auto-Skipped: ${autoSkipped ? 'Yes' : 'No'}.`;
+
+    // Send notification
+    await callMeBotService.sendSignalNotification(message);
+    console.log('Sent block notification for:', item.name);
+  } catch (error) {
+    console.error('Error sending block notification:', error.message);
+  }
 };
 
 /**
@@ -165,5 +231,6 @@ module.exports = {
   logPlaybackStarted,
   logAgeEvaluation,
   logAutoSkip,
-  cleanupTracking
+  cleanupTracking,
+  sendBlockNotification
 };

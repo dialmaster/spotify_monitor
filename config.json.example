@@ -4,6 +4,7 @@
   "spotifyUserName": "YOUR_SPOTIFY_USERNAME",
   "redirectUri": "http://localhost:8888/callback",
   "port": 8888,
+  "callMeBotUrl": "YOUR_CALLMEBOT_API_URL",
   "autoSkipBlocked": true,
   "monitorInterval": 10000,
   "geniusApiKey": "YOUR_GENIUS_API_KEY",

@@ -10,6 +10,7 @@ Spotify Account Monitor is a comprehensive web application that allows parents a
 - **Safety Controls**: Includes auto-skip capability for inappropriate content and supports monitoring multiple accounts
 - **User Experience**: Maintains a sleek, user-friendly interface that updates automatically without requiring page refreshes
 - **Activity Logging**: Automatically creates detailed logs of all playback activity, age evaluations, and content blocks for review and record-keeping
+- **Signal Notifications**: Sends real-time alerts via Signal messaging app when inappropriate content is detected or blocked
 
 This tool helps parents make informed decisions about their children's music and podcast consumption while providing a seamless monitoring experience.
 
@@ -41,6 +42,12 @@ The app has different levels of functionality depending on which API keys you co
   - AI-powered age appropriateness evaluations for songs and podcasts
   - Auto-skip functionality for blocked content when enabled
   - Note: Without this, the age evaluation feature will be disabled
+
+- **With CallMeBot Signal API**:
+  - Receive instant notifications via Signal messaging app when inappropriate content is detected
+  - Detailed information about blocked content including title, artist, album, and reason for blocking
+  - Works seamlessly with the auto-skip feature
+  - Note: Without this, notifications will only appear in the web interface
 
 ## System Requirements
 **Note**: *This application has only been tested in WSL2 on Windows, but should work fine in Linux as well*
@@ -76,7 +83,15 @@ The app has different levels of functionality depending on which API keys you co
    - Copy the API key (it will only be shown once)
    - Without this API key, the age evaluation feature will be disabled completely
 
-4. **Configure the application**:
+4. **Set Up CallMeBot Signal Notifications (Optional)**:
+   - Add the phone number `+34 644 52 74 88` to your phone contacts (name it as you wish)
+   - Send the message "I allow callmebot to send me messages" to this contact using Signal Messaging
+   - The bot will reply with your personal API key and URL
+   - The URL will look like: `https://signal.callmebot.com/signal/send.php?phone=<PHONE_OR_UUID>&apikey=<YOUR_API_KEY>&text=This+is+a+test`
+   - Copy the URL **without** the `&text=This+is+a+test` part to use in your config
+   - Without this API URL, notification alerts will only appear in the web interface
+
+5. **Configure the application**:
    - **NOTE**: You can use multiple config files with different port values and clientId/secret to run multiple instances side-by-side!
    - Copy the example config to create your own:
      ```bash
@@ -90,6 +105,7 @@ The app has different levels of functionality depending on which API keys you co
        "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
        "redirectUri": "http://localhost:8888/callback",
        "port": 8888,
+       "callMeBotUrl": "YOUR_CALLMEBOT_API_URL",
        "autoSkipBlocked": true,
        "monitorInterval": 30000,
        "geniusApiKey": "YOUR_GENIUS_API_KEY",
@@ -102,13 +118,14 @@ The app has different levels of functionality depending on which API keys you co
        "spotifyUserName": "YOUR_SPOTIFY_USERNAME"
      }
      ```
-     - If you don't want to use a specific feature, you can leave its API   key as the example value or remove it
-     - The app will automatically disable features for which valid API   keys aren't provided
-     - You can adjust the `monitorInterval` value (in milliseconds) to   change how often the app checks what's playing
-     - Set `autoSkipBlocked` to `true` to automatically skip tracks that   are rated as blocked by the age evaluation
-     - The `spotifyUserName` is used to create separate log files for each   monitored account (format: username_playback.log), and used to name   the docker-compose stacks
+     - If you don't want to use a specific feature, you can leave its API key as the example value or remove it
+     - The app will automatically disable features for which valid API keys aren't provided
+     - You can adjust the `monitorInterval` value (in milliseconds) to change how often the app checks what's playing
+     - Set `autoSkipBlocked` to `true` to automatically skip tracks that are rated as blocked by the age evaluation
+     - For `callMeBotUrl`, use the URL provided by CallMeBot **without** the `&text=` parameter
+     - The `spotifyUserName` is used to create separate log files for each monitored account (format: username_playback.log), and used to name the docker-compose stacks
 
-5. **Get Spotify Web Cookies (Optional but recommended for best lyrics/transcript retrieval)**:
+6. **Get Spotify Web Cookies (Optional but recommended for best lyrics/transcript retrieval)**:
    - Log in to [Spotify Web Player](https://open.spotify.com/) in your browser
    - Open developer tools (F12 or right-click > Inspect)
    - Go to the Console tab and type `document.cookie` and press Enter
@@ -116,7 +133,7 @@ The app has different levels of functionality depending on which API keys you co
    - Note that the following cookies are REQUIRED: `sp_dc`, `sp_t`, `sp_adid`, `sp_gaid`, and `sp_key`
    - Without these cookies, direct lyrics retrieval from Spotify won't work
 
-6. **Running With Docker**:
+7. **Running With Docker**:
    - The application includes a `run.sh` script that makes it easy to run multiple instances with Docker.
 
      - **Make the script executable**:
@@ -157,7 +174,7 @@ The app has different levels of functionality depending on which API keys you co
 
        For example: `docker compose -p spotify-monitor-grant down`
 
-7. **Authorize your Spotify account for each running instance**:
+8. **Authorize your Spotify account for each running instance**:
    - Open `http://localhost:<YOUR PORT>` in your browser for each running instance
    - **IMPORTANT**: Use the same browser where you are already logged into the Spotify session for that instance
    - Log in with your Spotify credentials when prompted
@@ -173,6 +190,7 @@ The app has different levels of functionality depending on which API keys you co
 - Shows lyrics for currently playing tracks (requires Genius API key or Spotify Web Cookies)
 - Evaluates age appropriateness of content (requires OpenAI API key)
 - Automatically skips tracks/podcasts rated as blocked based on age settings (optional feature)
+- Sends Signal notifications when inappropriate content is detected (requires CallMeBot setup)
 - Displays toast notifications when content is automatically skipped
 - Supports monitoring different accounts using different config files
 - Logs all playback activity, age evaluations, and content blocks to log files for review
