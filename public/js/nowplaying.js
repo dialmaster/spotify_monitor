@@ -340,6 +340,41 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ageEvalCache.has(cacheKey)) {
         console.log(`Using local cache for age evaluation of "${item.name}"`);
         const cachedData = ageEvalCache.get(cacheKey);
+
+        // If this song was previously blocked and auto-skipped, skip it again
+        if (cachedData.level === 'BLOCK' && cachedData.autoSkipped === true) {
+          console.log(`Song "${item.name}" was previously blocked and auto-skipped. Skipping again...`);
+
+          // Call the skip-blocked endpoint
+          try {
+            const response = await fetch('/api/skip-blocked', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ id: item.id })
+            });
+
+            if (!response.ok) {
+              throw new Error(`Error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+              // Show skip notification
+              if (result.skipMessage) {
+                // Clean up the message to remove timestamp if present
+                const cleanMessage = result.skipMessage.replace(/\s*\[\d+\]$/, '');
+                showToast(cleanMessage);
+              } else {
+                showToast(`"${item.name}" was auto-skipped again due to age restrictions.`);
+              }
+            }
+          } catch (error) {
+            console.error('Error skipping blocked track:', error);
+          }
+        }
+
         // Add the type to the cached data for level element selection
         cachedData.type = type;
 

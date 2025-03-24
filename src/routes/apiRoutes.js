@@ -218,4 +218,48 @@ router.post('/age-evaluation', async (req, res) => {
   }
 });
 
+// POST endpoint to skip a blocked track
+router.post('/skip-blocked', async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    // Basic validation
+    if (!id) {
+      return res.status(400).json({
+        error: 'Missing required parameter: id'
+      });
+    }
+
+    // Get current playback to verify this is still the active track
+    const currentPlayback = spotifyService.getCachedData.currentPlayback();
+
+    // Only skip if this is still the currently playing track/episode
+    if (currentPlayback && currentPlayback.playing && currentPlayback.item && currentPlayback.item.id === id) {
+      const skipResult = await spotifyService.skipToNextTrack();
+
+      if (skipResult) {
+        console.log(`Successfully skipped blocked track "${currentPlayback.item.name}"`);
+
+        // Log the auto-skip to file
+        logService.logAutoSkip(currentPlayback.item, 'BLOCK rating from age evaluation (re-skip)', null);
+
+        res.json({
+          success: true,
+          message: 'Track skipped successfully',
+          skipMessage: `"${currentPlayback.item.name}" was auto-skipped again due to age restrictions. [${Date.now()}]`
+        });
+      } else {
+        console.log(`Failed to skip blocked track "${currentPlayback.item.name}"`);
+        res.status(500).json({ error: 'Failed to skip track' });
+      }
+    } else {
+      console.log(`Not skipping track as it's no longer the active track`);
+      res.status(400).json({ error: 'Track is no longer playing' });
+    }
+  } catch (error) {
+    console.error('Skip blocked track API error:', error.message);
+    res.status(500).json({ error: 'Error skipping blocked track' });
+  }
+});
+
 module.exports = router;
