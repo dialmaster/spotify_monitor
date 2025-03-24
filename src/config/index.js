@@ -46,7 +46,7 @@ const config = {
 
   // App settings
   monitorInterval: rawConfig.monitorInterval || 30000, // Default 30 seconds
-  port: rawConfig.port || 8888,
+  port: 8888,
   autoSkipBlocked: rawConfig.autoSkipBlocked === true, // Default to false unless explicitly set to true
 
   // Genius API key - ensure it's a valid string

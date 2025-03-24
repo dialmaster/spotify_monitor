@@ -1,0 +1,16 @@
+services:
+  spotify-monitor:
+    build: .
+    ports:
+      - "${PORT:-8888}:8888"
+    volumes:
+      - ${CONFIG_PATH:-./.docker-config.json}:/app/config.json:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - spotify-network
+
+networks:
+  spotify-network:
+    external: true
+    name: spotify-shared-network

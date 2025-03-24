@@ -46,11 +46,8 @@ The app has different levels of functionality depending on which API keys you co
 **Note**: *This application has only been tested in WSL2 on Windows, but should work fine in Linux as well*
 
 - Node.js 14 or higher
+- Docker and Docker Compose (for running with the provided run.sh script)
 - npm or yarn
-- This application uses Puppeteer to scrape web lyrics, the following dependency is required:
-  ```bash
-  sudo apt-get update && sudo apt-get install -y libgbm1
-  ```
 
 ## Setup Instructions
 **NOTE**: *The instructions below show `8888` for the port, but this is actually dependent on the port you specify in your config.json*
@@ -80,35 +77,36 @@ The app has different levels of functionality depending on which API keys you co
    - Without this API key, the age evaluation feature will be disabled completely
 
 4. **Configure the application**:
+   - **NOTE**: You can use multiple config files with different port values and clientId/secret to run multiple instances side-by-side!
    - Copy the example config to create your own:
      ```bash
      cp config.json.example config.json
      ```
    - Edit `config.json` and add your Spotify Client ID and Client Secret (required)
    - Add optional API keys as needed for additional features:
-   ```json
-   {
-     "clientId": "YOUR_SPOTIFY_CLIENT_ID",
-     "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
-     "redirectUri": "http://localhost:8888/callback",
-     "port": 8888,
-     "autoSkipBlocked": true,
-     "monitorInterval": 30000,
-     "geniusApiKey": "YOUR_GENIUS_API_KEY",
-     "openAiApiKey": "YOUR_OPENAI_API_KEY",
-     "ageEvaluation": {
-       "listenerAge": 13,
-       "customInstructions": "Optional custom instructions for age evaluation"
-     },
-     "spotifyWebCookies": "COOKIES_FROM_SPOTIFY_WEB_PLAYER",
-     "spotifyUserName": "YOUR_SPOTIFY_USERNAME"
-   }
-   ```
-   - If you don't want to use a specific feature, you can leave its API key as the example value or remove it
-   - The app will automatically disable features for which valid API keys aren't provided
-   - You can adjust the `monitorInterval` value (in milliseconds) to change how often the app checks what's playing
-   - Set `autoSkipBlocked` to `true` to automatically skip tracks that are rated as blocked by the age evaluation
-   - The `spotifyUserName` is used to create separate log files for each monitored account (format: username_playback.log)
+     ```json
+     {
+       "clientId": "YOUR_SPOTIFY_CLIENT_ID",
+       "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
+       "redirectUri": "http://localhost:8888/callback",
+       "port": 8888,
+       "autoSkipBlocked": true,
+       "monitorInterval": 30000,
+       "geniusApiKey": "YOUR_GENIUS_API_KEY",
+       "openAiApiKey": "YOUR_OPENAI_API_KEY",
+       "ageEvaluation": {
+         "listenerAge": 13,
+         "customInstructions": "Optional custom instructions for age   evaluation"
+       },
+       "spotifyWebCookies": "COOKIES_FROM_SPOTIFY_WEB_PLAYER",
+       "spotifyUserName": "YOUR_SPOTIFY_USERNAME"
+     }
+     ```
+     - If you don't want to use a specific feature, you can leave its API   key as the example value or remove it
+     - The app will automatically disable features for which valid API   keys aren't provided
+     - You can adjust the `monitorInterval` value (in milliseconds) to   change how often the app checks what's playing
+     - Set `autoSkipBlocked` to `true` to automatically skip tracks that   are rated as blocked by the age evaluation
+     - The `spotifyUserName` is used to create separate log files for each   monitored account (format: username_playback.log), and used to name   the docker-compose stacks
 
 5. **Get Spotify Web Cookies (Optional but recommended for best lyrics/transcript retrieval)**:
    - Log in to [Spotify Web Player](https://open.spotify.com/) in your browser
@@ -118,54 +116,53 @@ The app has different levels of functionality depending on which API keys you co
    - Note that the following cookies are REQUIRED: `sp_dc`, `sp_t`, `sp_adid`, `sp_gaid`, and `sp_key`
    - Without these cookies, direct lyrics retrieval from Spotify won't work
 
-6. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+6. **Running With Docker**:
+   - The application includes a `run.sh` script that makes it easy to run multiple instances with Docker.
 
-7. **Run the application**:
-   ```bash
-   npm start
-   ```
-   - This will start the server at http://localhost:8888 using `config.json`
-   - Alternatively, run with a specific config file:
-     ```bash
-     node app.js your-config.json
-     ```
+     - **Make the script executable**:
+       ```bash
+       chmod +x run.sh
+       ```
 
-8. **Authorize your Spotify account**:
-   - Open http://localhost:8888 in your browser
-   - **IMPORTANT**: Use the same browser where you are already logged into Spotify
+     - **Run an instance using a config file**:
+       ```bash
+       ./run.sh --config=config.json
+       ```
+       The script will automatically use the port specified in your config file
+
+       It will create a unique Docker container based on the Spotify username in your config
+
+     - **Run multiple instances with different config files**
+
+       *Each config file MUST specify a different port value!*
+       ```bash
+       ./run.sh --config=config.firstconfig.json
+       ./run.sh --config=config.secondconfig.json
+       ```
+       Each instance will run in a separate container with its own port
+
+       All instances will share a network, allowing them to communicate if needed
+
+     - **List all running instances**:
+       ```bash
+       docker compose ls
+       ```
+       This will show all running Spotify Monitor instances and their status
+
+     - **Stop a specific instance**:
+       ```bash
+       docker compose -p spotify-monitor-username down
+       ```
+       Replace "username" with the Spotify username used in your config (lowercase).
+
+       For example: `docker compose -p spotify-monitor-grant down`
+
+7. **Authorize your Spotify account for each running instance**:
+   - Open `http://localhost:<YOUR PORT>` in your browser for each running instance
+   - **IMPORTANT**: Use the same browser where you are already logged into the Spotify session for that instance
    - Log in with your Spotify credentials when prompted
    - Allow the requested permissions
    - You'll be redirected back to the application
-
-## Multiple Account Monitoring
-
-To monitor different Spotify accounts:
-
-1. Create different config files (e.g., `config-account1.json`, `config-account2.json`)
-2. Start the application with the config file as a parameter:
-   ```bash
-   node app.js config-account1.json
-   ```
-3. To monitor another account, run the app again with a different port in the config:
-   ```json
-   {
-     "clientId": "YOUR_SPOTIFY_CLIENT_ID",
-     "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
-     "spotifyUserName": "YOUR_SPOTIFY_USERNAME",
-     "redirectUri": "http://localhost:8889/callback",
-     "port": 8889,
-     "autoSkipBlocked": true,
-     "monitorInterval": 30000,
-     "openAiApiKey": "YOUR_OPENAI_API_KEY"
-   }
-   ```
-   Then run:
-   ```bash
-   node app.js config-account2.json
-   ```
 
 ## Features
 

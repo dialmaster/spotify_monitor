@@ -6,7 +6,7 @@ const browserPool = {
   inUse: false,
   lastUsed: 0,
   maxIdleTime: 5 * 60 * 1000, // 5 minutes idle timeout
-  waitTimeout: 15000, // 15 seconds timeout for waiting on browser
+  waitTimeout: 18000, // 18 seconds timeout for waiting on browser
 
   async getBrowser() {
     // Wait if browser is in use by another request

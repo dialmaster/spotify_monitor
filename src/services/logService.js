@@ -5,13 +5,23 @@ const config = require('../config');
 // Map to track currently playing items to avoid duplicate logging
 let trackingMap = new Map();
 
+const ensureLogDirectoryExists = () => {
+  const logDir = path.join(process.cwd(), 'logs');
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+    console.log('Created logs directory:', logDir);
+  }
+};
+
+ensureLogDirectoryExists();
+
 /**
  * Get the log file path based on Spotify username in config
  */
 const getLogFilePath = () => {
   // Default to 'spotify_user' if no username is configured
   const username = config.spotifyUserName || 'spotify_user';
-  return path.join(process.cwd(), `${username}_playback.log`);
+  return path.join(process.cwd(), 'logs', `${username}_playback.log`);
 };
 
 /**

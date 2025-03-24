@@ -3,10 +3,6 @@
     "version": "1.0.0",
     "description": "Application to monitor what's being played on a Spotify account",
     "main": "app.js",
-    "scripts": {
-        "start": "node app.js",
-        "dev": "nodemon app.js"
-    },
     "dependencies": {
         "axios": "^1.6.2",
         "cookie-parser": "^1.4.6",
