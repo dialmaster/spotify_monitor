@@ -28,6 +28,23 @@ const evaluateContentAge = async (params) => {
     throw new Error('Missing required parameters: id, type, and title');
   }
 
+  // Check if track is whitelisted first
+  const isWhitelisted = config.whitelistTrackIDs && config.whitelistTrackIDs.includes(id);
+  if (isWhitelisted) {
+    console.log(`Track "${title}" (${id}) is whitelisted - skipping age evaluation`);
+    const response = {
+      ageRating: 'Whitelisted',
+      explanation: 'Track is whitelisted',
+      level: 'WARNING',
+      confidence: {
+        level: 'HIGH',
+        explanation: 'Track is in whitelist'
+      }
+    };
+    ageEvaluationCache.set(id, response);
+    return response;
+  }
+
   // Check if OpenAI is configured
   if (!openai) {
     throw new Error('OpenAI API not configured');

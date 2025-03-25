@@ -11,6 +11,7 @@ Spotify Account Monitor is a comprehensive web application that allows parents a
 - **User Experience**: Maintains a sleek, user-friendly interface that updates automatically without requiring page refreshes
 - **Activity Logging**: Automatically creates detailed logs of all playback activity, age evaluations, and content blocks for review and record-keeping
 - **Signal Notifications**: Sends real-time alerts via Signal messaging app when inappropriate content is detected or blocked
+- **Whitelist**: Supports whitelisting specific tracks to bypass age evaluation
 
 This tool helps parents make informed decisions about their children's music and podcast consumption while providing a seamless monitoring experience.
 
@@ -111,6 +112,10 @@ The app has different levels of functionality depending on which API keys you co
        "monitorInterval": 30000,
        "geniusApiKey": "YOUR_GENIUS_API_KEY",
        "openAiApiKey": "YOUR_OPENAI_API_KEY",
+       "whitelistTrackIDs": [
+         "SPOTIFY_TRACK_ID_1",
+         "SPOTIFY_TRACK_ID_2"
+       ],
        "ageEvaluation": {
          "listenerAge": 13,
          "customInstructions": "Optional custom instructions for age   evaluation"
@@ -123,8 +128,14 @@ The app has different levels of functionality depending on which API keys you co
      - The app will automatically disable features for which valid API keys aren't provided
      - You can adjust the `monitorInterval` value (in milliseconds) to change how often the app checks what's playing
      - Set `autoSkipBlocked` to `true` to automatically skip tracks that are rated as blocked by the age evaluation
+     - Add Spotify track IDs to `whitelistTrackIDs` to bypass age evaluation for specific tracks
+       - To find a track's ID:
+         1. Right-click on a song in Spotify and select "Share" > "Copy Song Link"
+         2. The ID is the string after the last "/" in the URL (e.g., for "https://open.spotify.com/track/1234567890abcdef", the ID is "1234567890abcdef")
      - For `callMeBotUrl`, use the URL provided by CallMeBot **without** the `&text=` parameter
      - The `spotifyUserName` is used to create separate log files for each monitored account (format: username_playback.log), and used to name the docker-compose stacks
+
+   **Note**: After making any changes to your config.json file, you'll need to restart the application for the changes to take effect. If running with Docker, use `docker compose -p spotify-monitor-username restart` (replace "username" with your Spotify username in lowercase).
 
 6. **Get Spotify Web Cookies (Optional but recommended for best lyrics/transcript retrieval)**:
    - Log in to [Spotify Web Player](https://open.spotify.com/) in your browser
@@ -175,6 +186,13 @@ The app has different levels of functionality depending on which API keys you co
 
        For example: `docker compose -p spotify-monitor-grant down`
 
+     - **View container logs**:
+       ```bash
+       docker compose -p spotify-monitor-username logs -f
+       ```
+       Replace "username" with your Spotify username in lowercase.
+       The `-f` flag will follow the logs in real-time. Press Ctrl+C to stop following.
+
 8. **Authorize your Spotify account for each running instance**:
    - Open `http://localhost:<YOUR PORT>` in your browser for each running instance
    - **IMPORTANT**: Use the same browser where you are already logged into the Spotify session for that instance
@@ -190,6 +208,7 @@ The app has different levels of functionality depending on which API keys you co
 - Displays track information including name, artist, album, and playback progress
 - Shows lyrics for currently playing tracks (requires Genius API key or Spotify Web Cookies)
 - Evaluates age appropriateness of content (requires OpenAI API key)
+- Supports whitelisting specific tracks to bypass age evaluation
 - Automatically skips tracks/podcasts rated as blocked based on age settings (optional feature)
 - Sends Signal notifications when inappropriate content is detected (requires CallMeBot setup)
 - Displays toast notifications when content is automatically skipped

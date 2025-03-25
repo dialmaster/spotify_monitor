@@ -50,6 +50,9 @@ const config = {
   port: 8888,
   autoSkipBlocked: rawConfig.autoSkipBlocked === true, // Default to false unless explicitly set to true
 
+  // Whitelist of track IDs that should not be blocked
+  whitelistTrackIDs: Array.isArray(rawConfig.whitelistTrackIDs) ? rawConfig.whitelistTrackIDs : [],
+
   callMeBotUrl: typeof rawConfig.callMeBotUrl === 'string' && !isPlaceholderValue(rawConfig.callMeBotUrl)
     ? rawConfig.callMeBotUrl
     : undefined,
