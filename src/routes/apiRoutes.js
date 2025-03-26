@@ -30,6 +30,38 @@ router.get('/currently-playing', async (req, res) => {
   }
 });
 
+// API endpoint to get user profile
+router.get('/user-profile', async (req, res) => {
+  try {
+    // If we don't have a token, return error
+    if (!spotifyService.getCachedData.isAuthenticated()) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Get the user profile from cache
+    let userProfile = spotifyService.getCachedData.userProfile();
+
+    // If user profile isn't fetched yet, get it
+    if (!userProfile.fetched) {
+      try {
+        userProfile = await spotifyService.getCurrentUserProfile();
+      } catch (profileError) {
+        console.error('Error fetching user profile:', profileError.message);
+        return res.status(500).json({ error: 'Error fetching user profile' });
+      }
+    }
+
+    // Return the display_name and email only
+    res.json({
+      display_name: userProfile.display_name || 'Unknown User',
+      email: userProfile.email || 'No email available'
+    });
+  } catch (error) {
+    console.error('API error:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // API endpoint to get recently played
 router.get('/recently-played', async (req, res) => {
   try {

@@ -21,6 +21,15 @@ const tokenInfo = {
   expires_at: null
 };
 
+// User profile information storage
+const userInfo = {
+  id: null,
+  display_name: null,
+  email: null,
+  explicit_content: null,
+  fetched: false
+};
+
 // Current playback state
 let currentPlayback = null;
 // Play history
@@ -76,6 +85,65 @@ const refreshAccessToken = async () => {
   }
 };
 
+// Get current user profile information
+const getCurrentUserProfile = async () => {
+  // Skip if we already have the user info
+  if (userInfo.fetched) {
+    console.log('User profile already fetched, using cached data');
+    return userInfo;
+  }
+
+  try {
+    if (isTokenExpired()) {
+      console.log('Token expired, attempting to refresh before fetching user profile...');
+      const refreshed = await refreshAccessToken();
+      if (!refreshed) {
+        throw new Error('Failed to refresh access token');
+      }
+    }
+
+    if (!tokenInfo.access_token) {
+      throw new Error('No access token available. Please authorize first.');
+    }
+
+    console.log('Fetching user profile information...');
+    const response = await axios({
+      method: 'get',
+      url: 'https://api.spotify.com/v1/me',
+      headers: {
+        'Authorization': 'Bearer ' + tokenInfo.access_token
+      }
+    });
+
+    // Store only the fields we're interested in
+    userInfo.id = response.data.id;
+    userInfo.display_name = response.data.display_name;
+    userInfo.email = response.data.email;
+    userInfo.explicit_content = response.data.explicit_content;
+    userInfo.fetched = true;
+
+    console.log('User profile fetched successfully:');
+    console.log(`- User ID: ${userInfo.id}`);
+    console.log(`- Display Name: ${userInfo.display_name}`);
+    console.log(`- Email: ${userInfo.email}`);
+    console.log(`- Explicit Content Filter Enabled: ${userInfo.explicit_content?.filter_enabled}`);
+    console.log(`- Explicit Content Filter Locked: ${userInfo.explicit_content?.filter_locked}`);
+
+    return userInfo;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Spotify API Error (User Profile):', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message
+      });
+    } else {
+      console.error('Error in getCurrentUserProfile:', error.message);
+    }
+    throw error;
+  }
+};
+
 // Exchange authorization code for access token
 const exchangeCodeForToken = async (code) => {
   try {
@@ -97,6 +165,14 @@ const exchangeCodeForToken = async (code) => {
     tokenInfo.access_token = data.access_token;
     tokenInfo.refresh_token = data.refresh_token;
     tokenInfo.expires_at = Date.now() + (data.expires_in * 1000);
+
+    // Fetch user profile information after successful token exchange
+    try {
+      await getCurrentUserProfile();
+    } catch (profileError) {
+      console.error('Error fetching user profile:', profileError.message);
+      // Continue even if profile fetch fails
+    }
 
     return true;
   } catch (error) {
@@ -372,7 +448,7 @@ const startMonitoring = () => {
 
 // Get authorization URL
 const getAuthorizationUrl = (state) => {
-  const scope = 'user-read-currently-playing user-read-playback-state user-read-recently-played user-modify-playback-state';
+  const scope = 'user-read-currently-playing user-read-playback-state user-read-recently-played user-modify-playback-state user-read-private user-read-email';
   return 'https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
@@ -388,7 +464,8 @@ const getCachedData = {
   currentPlayback: () => currentPlayback,
   playHistory: () => playHistory,
   lastHistoryFetch: () => lastHistoryFetch,
-  isAuthenticated: () => !!tokenInfo.access_token
+  isAuthenticated: () => !!tokenInfo.access_token,
+  userProfile: () => userInfo
 };
 
 module.exports = {
@@ -402,5 +479,6 @@ module.exports = {
   startMonitoring,
   getAuthorizationUrl,
   getCachedData,
-  skipToNextTrack
+  skipToNextTrack,
+  getCurrentUserProfile
 };

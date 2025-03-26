@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const noHistoryEl = document.getElementById('no-history');
   const historyListEl = document.getElementById('history-list');
 
+  // User info elements
+  const userInfoContainerEl = document.getElementById('user-info-container');
+  const userDisplayNameEl = document.getElementById('user-display-name');
+  const userEmailEl = document.getElementById('user-email');
+
   // Create toast notification container
   const toastContainerEl = document.createElement('div');
   toastContainerEl.id = 'toast-container';
@@ -907,6 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initial fetches
   fetchCurrentlyPlaying();
   fetchRecentlyPlayed();
+  fetchUserProfile();
 
   // Refresh currently playing data every 7 seconds
   setInterval(fetchCurrentlyPlaying, 7000);
@@ -920,4 +926,32 @@ document.addEventListener('DOMContentLoaded', () => {
     ageEvalCache.clear();
     console.log('Caches cleared');
   });
+
+  // Fetch user profile information
+  async function fetchUserProfile() {
+    try {
+      const response = await fetch('/api/user-profile');
+
+      if (!response.ok) {
+        console.error('Failed to fetch user profile:', response.status);
+        return;
+      }
+
+      const userData = await response.json();
+
+      if (userData.display_name || userData.email) {
+        if (userData.display_name) {
+          userDisplayNameEl.textContent = userData.display_name;
+        }
+
+        if (userData.email) {
+          userEmailEl.textContent = userData.email;
+        }
+
+        userInfoContainerEl.classList.remove('hidden');
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  }
 });
