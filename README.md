@@ -2,6 +2,8 @@
 
 Spotify Account Monitor is a comprehensive web application that allows parents and guardians to track and monitor Spotify listening activity in real-time.
 
+## **NOTE**: This is a work in progress! Use it if you wish, but I make no guarantees :)
+
 ## Key Features
 
 - **Real-time Monitoring**: Displays currently playing tracks or podcasts with detailed information including album art, artists, playback progress, and recently played content
@@ -250,3 +252,9 @@ spotify_monitor/
     └── utils/             # Utility functions
         └── browserPool.js # Puppeteer browser management
 ```
+
+## Sample Images
+
+![Image 1](https://github.com/user-attachments/assets/04e2374f-7611-4fa0-9008-28a14d06d375)
+
+![Image 2](https://github.com/user-attachments/assets/ec211ed6-4ebf-4302-8db7-e6d9ce33ccc9)
