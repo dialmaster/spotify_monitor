@@ -113,6 +113,17 @@ const evaluateContentAge = async (params) => {
     }
   }
 
+  // Truncate content to 12000 characters if needed
+  const MAX_CONTENT_LENGTH = 12000;
+  let truncationMessage = '';
+
+  if (content.length > MAX_CONTENT_LENGTH) {
+    console.log(`Content for "${title}" is too long (${content.length} chars), truncating to ${MAX_CONTENT_LENGTH} chars`);
+    content = content.substring(0, MAX_CONTENT_LENGTH);
+    truncationMessage = `\n[Content truncated due to length. Evaluation based on first ${MAX_CONTENT_LENGTH} characters.]`;
+    content += truncationMessage;
+  }
+
   console.log(`Requesting age evaluation for "${title}"`);
 
   try {
