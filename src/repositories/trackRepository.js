@@ -8,8 +8,6 @@ const { Track } = require('../models');
  */
 async function saveTrack(trackData) {
   try {
-    console.log('Attempting to save track with data:', JSON.stringify(trackData, null, 2));
-
     const [track, created] = await Track.upsert({
       trackId: trackData.trackId,
       type: trackData.type,

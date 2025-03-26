@@ -108,7 +108,6 @@ const exchangeCodeForToken = async (code) => {
 // Get currently playing track
 const getCurrentlyPlaying = async () => {
   try {
-    console.log('Checking if token is expired...');
     if (isTokenExpired()) {
       console.log('Token expired, attempting to refresh...');
       const refreshed = await refreshAccessToken();
@@ -122,7 +121,6 @@ const getCurrentlyPlaying = async () => {
       throw new Error('No access token available. Please authorize first.');
     }
 
-    console.log('Making request to Spotify API...');
     const response = await axios({
       method: 'get',
       url: 'https://api.spotify.com/v1/me/player',
@@ -140,8 +138,6 @@ const getCurrentlyPlaying = async () => {
       currentPlayback = { playing: false };
       return { playing: false };
     }
-
-    console.log('Received playing data from Spotify');
 
     // For podcast episodes or tracks, create the response object
     const playbackData = {

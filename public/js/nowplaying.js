@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Even if lyrics fetch fails, we should still do age evaluation
       if (currentData && currentData.item) {
-        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, null, null, null);
+        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type);
       }
     }
   };
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         podcastTranscriptNotFoundEl.classList.remove('hidden');
         // Since we couldn't get transcript, pass null to age evaluation
         if (currentData && currentData.item) {
-          fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null, null, null);
+          fetchAndDisplayAgeEvaluation(currentData.item, 'episode');
         }
         return;
       }
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Even if transcript fetch fails, we should still do age evaluation
       if (currentData && currentData.item) {
-        fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null, null, null);
+        fetchAndDisplayAgeEvaluation(currentData.item, 'episode');
       }
     }
   };
@@ -284,9 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Now that we have transcript, fetch age evaluation
       if (currentData && currentData.item) {
-        // Use sourceDetail if available for more detailed confidence information
-        const sourceDetail = data.sourceDetail || null;
-        fetchAndDisplayAgeEvaluation(currentData.item, 'episode', data.lyrics, data.source, sourceDetail);
+        fetchAndDisplayAgeEvaluation(currentData.item, 'episode');
       }
     } else {
       // Show not found message
@@ -299,14 +297,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Even without transcript, we can still evaluate based on episode info
       if (currentData && currentData.item) {
-        fetchAndDisplayAgeEvaluation(currentData.item, 'episode', null, null, null);
+        fetchAndDisplayAgeEvaluation(currentData.item, 'episode');
       }
     }
   };
 
   // Fetch and display age evaluation for a track or podcast
-  const fetchAndDisplayAgeEvaluation = async (item, type, lyrics, lyricsSource, sourceDetail) => {
-    console.log('Fetching age evaluation for:', item, type, lyrics ? 'with lyrics' : 'without lyrics');
+  const fetchAndDisplayAgeEvaluation = async (item, type) => {
+    console.log('Fetching age evaluation for:', item, type);
     try {
       // Select the appropriate age evaluation elements based on content type
       const ageContainerEl = type === 'track' ? trackAgeContainerEl : podcastAgeContainerEl;
@@ -378,16 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add the type to the cached data for level element selection
         cachedData.type = type;
 
-        // Update the cached entry with potentially new lyrics source for confidence level
-        if (lyricsSource && !cachedData.lyricsSource) {
-          cachedData.lyricsSource = lyricsSource;
-        }
-
-        // Update sourceDetail if available
-        if (sourceDetail && !cachedData.sourceDetail) {
-          cachedData.sourceDetail = sourceDetail;
-        }
-
         displayAgeEvaluation(
           cachedData,
           ageLoadingEl,
@@ -409,23 +397,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Add additional data based on content type
       if (type === 'track') {
         requestData.artist = item.artists?.[0]?.name || 'Unknown';
-        if (lyrics) {
-          requestData.lyrics = lyrics;
-        }
-        // Pass lyrics source if available
-        if (lyricsSource) {
-          requestData.lyricsSource = lyricsSource;
-        }
       } else if (type === 'episode') {
         if (item.description) {
           requestData.description = item.description;
-        }
-        if (lyrics) {
-          requestData.lyrics = lyrics;
-        }
-        // Pass lyrics source if available
-        if (lyricsSource) {
-          requestData.lyricsSource = lyricsSource;
         }
       }
 
@@ -455,14 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Add the type to the data for level element selection
       data.type = type;
-
-      // Add the lyrics source for confidence level determination
-      data.lyricsSource = lyricsSource;
-
-      // Add source detail if available
-      if (sourceDetail) {
-        data.sourceDetail = sourceDetail;
-      }
 
       // Store in local cache
       ageEvalCache.set(cacheKey, data);
@@ -661,9 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Now that we have lyrics, fetch age evaluation
       if (currentData && currentData.item && currentData.type === 'track') {
-        // Use sourceDetail if available for more detailed confidence information
-        const sourceDetail = data.sourceDetail || null;
-        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, data.lyrics, data.source, sourceDetail);
+        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type);
       }
     } else {
       // Show not found message
@@ -676,7 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Even without lyrics, we can still evaluate based on track info
       if (currentData && currentData.item && currentData.type === 'track') {
-        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type, null, null, null);
+        fetchAndDisplayAgeEvaluation(currentData.item, currentData.type);
       }
     }
   };
@@ -814,7 +778,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchAndDisplayTranscript(data.item.name, data.item.external_urls.spotify);
       } else {
         // If no Spotify URL, we can't fetch transcript, so evaluate without it
-        fetchAndDisplayAgeEvaluation(data.item, 'episode', null, null, null);
+        fetchAndDisplayAgeEvaluation(data.item, 'episode');
       }
     }
   };

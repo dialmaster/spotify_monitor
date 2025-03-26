@@ -199,7 +199,7 @@ router.get('/lyrics', async (req, res) => {
 // POST endpoint for age evaluation
 router.post('/age-evaluation', async (req, res) => {
   try {
-    const { id, type, title, artist, description, lyrics, lyricsSource, spotifyUrl } = req.body;
+    const { id, type, title, artist, description, spotifyUrl } = req.body;
 
     // Basic validation
     if (!id || !type || !title) {
@@ -219,7 +219,7 @@ router.post('/age-evaluation', async (req, res) => {
 
     // Evaluate the content
     const evaluation = await ageEvaluationService.evaluateContentAge({
-      id, type, title, artist, description, lyrics, lyricsSource, spotifyUrl
+      id, type, title, artist, description, spotifyUrl
     });
 
     // Log the evaluation to file

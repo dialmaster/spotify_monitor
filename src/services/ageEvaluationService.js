@@ -1,5 +1,6 @@
 const OpenAI = require('openai');
 const config = require('../config');
+const trackRepository = require('../repositories/trackRepository');
 
 // Initialize OpenAI if API key is available
 let openai = null;
@@ -19,9 +20,19 @@ if (config.openAiApiKey) {
 // Store age evaluation cache
 const ageEvaluationCache = new Map();
 
-// Evaluate content age-appropriateness
+/**
+ * Evaluate content age-appropriateness
+ * @param {Object} params - Parameters for age evaluation
+ * @param {string} params.id - Spotify ID of the track or episode
+ * @param {string} params.type - Type of content ('track' or 'episode')
+ * @param {string} params.title - Title of the track or episode
+ * @param {string} params.artist - Artist name (for tracks)
+ * @param {string} params.description - Episode description (for podcasts)
+ * @param {string} params.spotifyUrl - Spotify URL of the content
+ * @returns {Promise<Object>} - Age evaluation result
+ */
 const evaluateContentAge = async (params) => {
-  const { id, type, title, artist, description, lyrics, lyricsSource, spotifyUrl } = params;
+  const { id, type, title, artist, description, spotifyUrl } = params;
 
   // Basic validation
   if (!id || !type || !title) {
@@ -67,6 +78,24 @@ const evaluateContentAge = async (params) => {
     console.log('Age evaluation cache full, removed oldest entry');
   }
 
+  // Try to fetch lyrics/transcript from the database
+  let lyrics = null;
+  let lyricsSource = null;
+
+  try {
+    const storedTrack = await trackRepository.findTrackById(id);
+
+    if (storedTrack && storedTrack.lyrics) {
+      lyrics = storedTrack.lyrics;
+      lyricsSource = storedTrack.lyricsSource;
+    } else {
+      console.log(`No stored lyrics/transcript found for "${id}"`);
+    }
+  } catch (error) {
+    console.error(`Error fetching stored lyrics content for ${id}:`, error.message);
+    // Continue without lyrics if there's an error
+  }
+
   // Prepare content for evaluation
   let content = '';
   if (type === 'track') {
@@ -80,7 +109,7 @@ const evaluateContentAge = async (params) => {
       content += `\nDescription:\n${description}`;
     }
     if (lyrics) {
-      content += `\nLyrics:\n${lyrics}`;
+      content += `\nTranscript:\n${lyrics}`;
     }
   }
 
@@ -170,7 +199,7 @@ DO NOT wrap your response in markdown code blocks.`,
     // Safely check if spotifyUrl exists and contains spotify.com
     const fromSpotify = spotifyUrl && spotifyUrl.includes('spotify.com');
 
-    if (lyricsSource === 'spotify-api' || lyricsSource === 'spotify-web' || lyricsSource === 'spotify-podcast-transcript') {
+    if (lyricsSource && lyricsSource.includes('spotify')) {
       confidenceLevel = 'HIGH';
       confidenceExplanation = type === 'track'
         ? 'We have official lyrics from Spotify'
