@@ -3,6 +3,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const config = require('./config');
 const browserPool = require('./utils/browserPool');
+const dbService = require('./services/dbService');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -27,7 +28,7 @@ app.use('/', authRoutes);
 app.use('/api', apiRoutes);
 
 // Start the server
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, async () => {
   console.log(`Server running at http://localhost:${config.port}`);
   console.log(`Using config file: ${config.getConfigPath()}`);
   console.log(`Genius API key configured: ${config.hasGeniusLyrics() ? 'Yes' : 'No (lyrics functionality may be limited)'}`);
@@ -40,6 +41,15 @@ const server = app.listen(config.port, () => {
   }
   console.log(`To authorize Spotify, open http://localhost:${config.port} in your browser`);
 
+  // Initialize database connection
+  try {
+    dbService.initializeDb();
+    const dbConnected = await dbService.testConnection();
+    console.log(`Database connection: ${dbConnected ? 'Successful' : 'Failed'}`);
+  } catch (error) {
+    console.error('Error initializing database:', error);
+  }
+
   // Start browser pool idle checking
   browserPool.startIdleChecking();
 
@@ -49,6 +59,16 @@ const server = app.listen(config.port, () => {
   } else {
     console.log('Skipping Puppeteer preload as no Spotify web cookies are configured');
   }
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  await dbService.closePool();
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 
 // Export the app and server for testing

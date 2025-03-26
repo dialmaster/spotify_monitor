@@ -10,11 +10,11 @@ services:
     networks:
       - spotify-network
     environment:
-      - DB_HOST=spotify-shared-db
-      - DB_PORT=5432
-      - DB_NAME=spotify_data
-      - DB_USER=${DB_USER:-spotify}
-      - DB_PASSWORD=${DB_PASSWORD:-spotify_password}
+      - POSTGRES_HOST=spotify-shared-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=spotify_data
+      - POSTGRES_USER=${DB_USER:-spotify}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-spotify_password}
 
 networks:
   spotify-network:
