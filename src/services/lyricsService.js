@@ -479,7 +479,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
 };
 
 // Get track lyrics using Genius API
-const getGeniusLyrics = async (title, artist) => {
+const getGeniusLyrics = async (title, artist, trackId = null) => {
   // Initialize Genius client with API key
   const geniusClient = new Genius.Client(config.geniusApiKey);
 
@@ -512,26 +512,16 @@ const getGeniusLyrics = async (title, artist) => {
       sourceDetail: 'Lyrics from Genius (third-party lyrics database)'
     };
 
-    // Try to save to database - we need to extract a track ID from somewhere
-    // This might come from a previous call or be passed as a parameter
-    if (title && artist) {
+    // Save lyrics to database if we have a track ID
+    if (trackId) {
       try {
-        // Try to find the track in the database by title and artist
-        const tracks = await trackRepository.findTracksByTitle(title);
-        if (tracks && tracks.length > 0) {
-          // Find the best match by artist
-          const matchingTrack = tracks.find(track =>
-            track.artist && track.artist.toLowerCase().includes(artist.toLowerCase()));
-
-          if (matchingTrack) {
-            console.log(`Saving Genius lyrics to database for track ${matchingTrack.trackId}`);
-            await trackRepository.updateTrackLyrics(matchingTrack.trackId, lyrics, 'genius');
-          }
-        }
+        await trackRepository.updateTrackLyrics(trackId, lyrics, 'genius');
       } catch (dbError) {
         console.error('Error saving Genius lyrics to database:', dbError.message);
         // Continue even if database save fails
       }
+    } else {
+      console.log('No trackId provided, skipping database update for Genius lyrics');
     }
 
     return lyricsData;

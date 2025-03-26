@@ -177,7 +177,7 @@ router.get('/lyrics', async (req, res) => {
     }
 
     // Fall back to Genius if Spotify methods failed or weren't attempted
-    const geniusResult = await lyricsService.getGeniusLyrics(title, artist);
+    const geniusResult = await lyricsService.getGeniusLyrics(title, artist, trackId);
 
     if (geniusResult) {
       console.log('Successfully fetched lyrics from Genius');
