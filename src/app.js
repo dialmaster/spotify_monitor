@@ -1,3 +1,4 @@
+// src/app.js
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
@@ -41,11 +42,16 @@ const server = app.listen(config.port, async () => {
   }
   console.log(`To authorize Spotify, open http://localhost:${config.port} in your browser`);
 
-  // Initialize database connection
+  // Initialize database connection and run migrations
   try {
-    dbService.initializeDb();
+    const { models } = await dbService.initializeDb();
+    console.log('Database initialized with Sequelize models');
+
     const dbConnected = await dbService.testConnection();
     console.log(`Database connection: ${dbConnected ? 'Successful' : 'Failed'}`);
+
+    // Log available models
+    console.log('Available Sequelize models:', Object.keys(models).filter(key => key !== 'sequelize' && key !== 'Sequelize'));
   } catch (error) {
     console.error('Error initializing database:', error);
   }

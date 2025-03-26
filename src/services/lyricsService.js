@@ -1,6 +1,7 @@
 const Genius = require('genius-lyrics');
 const config = require('../config');
 const browserPool = require('../utils/browserPool');
+const trackRepository = require('../repositories/trackRepository');
 
 // Get lyrics from Spotify web UI using Puppeteer
 const getSpotifyLyrics = async (trackUrl) => {
@@ -136,6 +137,21 @@ const getSpotifyLyrics = async (trackUrl) => {
 
       // Return the lyrics if we found some
       if (lyrics && lyrics.trim().length > 0) {
+        // Extract the track ID from the URL
+        const trackIdMatch = trackUrl.match(/track\/([a-zA-Z0-9]+)/);
+        const trackId = trackIdMatch ? trackIdMatch[1] : null;
+
+        // Save lyrics to database if we have a track ID
+        if (trackId) {
+          try {
+            console.log(`Saving Spotify web lyrics to database for track ${trackId}`);
+            await trackRepository.updateTrackLyrics(trackId, lyrics, 'spotify-web');
+          } catch (dbError) {
+            console.error('Error saving lyrics to database:', dbError.message);
+            // Continue even if database save fails
+          }
+        }
+
         return lyrics;
       } else {
         console.log('No lyrics content found in the container');
@@ -424,14 +440,27 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
 
       // Log stats and limit to 10000 characters
       if (transcript) {
-        const truncatedTranscript = transcript.substring(0, 10000);
-        const originalLength = transcript.length;
         const lineCount = transcript.split('\n').length;
-        console.log(`Successfully extracted transcript (${lineCount} lines, ${originalLength} chars, truncated to 10000 chars)`);
+        console.log(`Successfully extracted transcript (${lineCount} lines, ${transcript.length} chars)`);
+
+        // Extract the episode ID from the URL
+        const episodeIdMatch = episodeUrl.match(/episode\/([a-zA-Z0-9]+)/);
+        const episodeId = episodeIdMatch ? episodeIdMatch[1] : null;
+
+        // Save transcript to database if we have an episode ID
+        if (episodeId) {
+          try {
+            console.log(`Saving podcast transcript to database for episode ${episodeId}`);
+            await trackRepository.updateTrackLyrics(episodeId, transcript, 'spotify-transcript');
+          } catch (dbError) {
+            console.error('Error saving transcript to database:', dbError.message);
+            // Continue even if database save fails
+          }
+        }
 
         await page.close().catch(e => console.log('Error closing page:', e.message));
         await browserPool.releaseBrowser();
-        return truncatedTranscript;
+        return transcript;
       } else {
         console.log('No transcript content found');
         await page.close().catch(e => console.log('Error closing page:', e.message));
@@ -472,7 +501,9 @@ const getGeniusLyrics = async (title, artist) => {
     const lyrics = await song.lyrics();
 
     console.log('Successfully fetched lyrics from Genius');
-    return {
+
+    // Create response with lyrics data
+    const lyricsData = {
       lyrics,
       title: song.title,
       artist: song.artist.name,
@@ -480,6 +511,30 @@ const getGeniusLyrics = async (title, artist) => {
       url: song.url,
       sourceDetail: 'Lyrics from Genius (third-party lyrics database)'
     };
+
+    // Try to save to database - we need to extract a track ID from somewhere
+    // This might come from a previous call or be passed as a parameter
+    if (title && artist) {
+      try {
+        // Try to find the track in the database by title and artist
+        const tracks = await trackRepository.findTracksByTitle(title);
+        if (tracks && tracks.length > 0) {
+          // Find the best match by artist
+          const matchingTrack = tracks.find(track =>
+            track.artist && track.artist.toLowerCase().includes(artist.toLowerCase()));
+
+          if (matchingTrack) {
+            console.log(`Saving Genius lyrics to database for track ${matchingTrack.trackId}`);
+            await trackRepository.updateTrackLyrics(matchingTrack.trackId, lyrics, 'genius');
+          }
+        }
+      } catch (dbError) {
+        console.error('Error saving Genius lyrics to database:', dbError.message);
+        // Continue even if database save fails
+      }
+    }
+
+    return lyricsData;
   } catch (error) {
     console.error('Genius search/lyrics error:', error.message);
     return null;

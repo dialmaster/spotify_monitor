@@ -2,6 +2,7 @@ const axios = require('axios');
 const querystring = require('querystring');
 const config = require('../config');
 const logService = require('./logService');
+const trackRepository = require('../repositories/trackRepository');
 
 // Helper function to generate a random string for state
 const generateRandomString = (length) => {
@@ -153,6 +154,44 @@ const getCurrentlyPlaying = async () => {
 
     // Store the current playback for the API
     currentPlayback = playbackData;
+
+    // Save to database if it's a track or episode
+    if (playbackData.playing && playbackData.item && playbackData.item.id) {
+      try {
+        const trackData = {
+          trackId: playbackData.item.id,
+          type: playbackData.type,
+          title: playbackData.item.name,
+          duration: playbackData.item.duration_ms
+        };
+
+        // Handle track-specific fields
+        if (playbackData.type === 'track') {
+          trackData.artist = playbackData.item.artists.map(artist => artist.name).join(', ');
+          trackData.album = playbackData.item.album?.name;
+          trackData.albumArt = playbackData.item.album?.images?.[0]?.url;
+        }
+        // Handle episode-specific fields
+        else if (playbackData.type === 'episode') {
+          trackData.artist = playbackData.item.show?.publisher;
+          trackData.album = playbackData.item.show?.name;
+          trackData.albumArt = playbackData.item.images?.[0]?.url;
+          trackData.description = playbackData.item.description;
+        }
+
+        console.log(`Saving ${playbackData.type} data to database: ${trackData.title}`);
+        const result = await trackRepository.saveTrack(trackData);
+        if (result.created) {
+          console.log(`New ${playbackData.type} saved to database with ID: ${trackData.trackId}`);
+        } else {
+          console.log(`${playbackData.type} already exists in database with ID: ${trackData.trackId}`);
+        }
+      } catch (dbError) {
+        console.error('Error saving track to database:', dbError.message);
+        console.error('Database error details:', dbError);
+        // Continue execution even if database save fails
+      }
+    }
 
     return playbackData;
   } catch (error) {

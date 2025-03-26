@@ -1,15 +1,18 @@
+// src/services/dbService.js
 const { Pool } = require('pg');
 const config = require('../config');
+const models = require('../models');
+const migrationRunner = require('../utils/migrationRunner');
 
 let pool = null;
 
 /**
- * Initialize the database connection pool
- * @returns {Pool} The database connection pool
+ * Initialize the database connection pool and run migrations
+ * @returns {Promise<Object>} The database models
  */
-function initializeDb() {
+async function initializeDb() {
   if (pool) {
-    return pool;
+    return { pool, models };
   }
 
   // Since we're always in Docker, use the service name directly
@@ -33,7 +36,22 @@ function initializeDb() {
     console.error('Unexpected error on idle database client', err);
   });
 
-  return pool;
+  try {
+    // Connect to database using Sequelize
+    await models.sequelize.authenticate();
+    console.log('Sequelize connection has been established successfully.');
+
+    // Run migrations
+    const migrationSuccess = await migrationRunner.runMigrations();
+    if (!migrationSuccess) {
+      console.warn('Some migrations failed to run, but the application will continue.');
+    }
+
+    return { pool, models };
+  } catch (error) {
+    console.error('Unable to connect to the database or run migrations:', error);
+    throw error;
+  }
 }
 
 /**
@@ -42,9 +60,17 @@ function initializeDb() {
  */
 function getPool() {
   if (!pool) {
-    return initializeDb();
+    throw new Error('Database not initialized. Call initializeDb first.');
   }
   return pool;
+}
+
+/**
+ * Get the database models
+ * @returns {Object} The Sequelize models
+ */
+function getModels() {
+  return models;
 }
 
 /**
@@ -55,6 +81,10 @@ async function testConnection() {
   try {
     const client = await pool.connect();
     client.release();
+
+    // Also test Sequelize connection
+    await models.sequelize.authenticate();
+
     return true;
   } catch (error) {
     console.error('Database connection test failed:', error);
@@ -71,11 +101,18 @@ async function closePool() {
     await pool.end();
     pool = null;
   }
+
+  // Close Sequelize connection as well
+  if (models.sequelize) {
+    await models.sequelize.close();
+    console.log('Sequelize connection closed');
+  }
 }
 
 module.exports = {
   initializeDb,
   getPool,
+  getModels,
   testConnection,
   closePool
 };

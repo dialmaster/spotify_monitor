@@ -5,6 +5,7 @@ const lyricsService = require('../services/lyricsService');
 const ageEvaluationService = require('../services/ageEvaluationService');
 const logService = require('../services/logService');
 const config = require('../config');
+const trackRepository = require('../repositories/trackRepository');
 
 // API endpoint to get currently playing
 router.get('/currently-playing', async (req, res) => {
@@ -67,6 +68,30 @@ router.get('/lyrics', async (req, res) => {
 
       console.log(`Fetching transcript for podcast episode: "${title}"`);
 
+      // Extract the episode ID from the URL
+      const episodeIdMatch = spotifyUrl.match(/episode\/([a-zA-Z0-9]+)/);
+      const episodeId = episodeIdMatch ? episodeIdMatch[1] : null;
+
+      // Check if we already have the transcript in the database
+      if (episodeId) {
+        try {
+          const storedTrack = await trackRepository.findTrackById(episodeId);
+          if (storedTrack && storedTrack.lyrics) {
+            console.log(`Found existing transcript in database for episode ${episodeId}`);
+            return res.json({
+              lyrics: storedTrack.lyrics,
+              title,
+              source: storedTrack.lyricsSource || 'database',
+              url: spotifyUrl,
+              sourceDetail: 'Retrieved from database (previously saved from Spotify)'
+            });
+          }
+        } catch (dbError) {
+          console.error('Error checking database for transcript:', dbError.message);
+          // Continue to fetch from Spotify if database check fails
+        }
+      }
+
       // Try to get transcript from the Spotify web page
       const transcript = await lyricsService.getSpotifyPodcastTranscript(spotifyUrl);
 
@@ -99,7 +124,35 @@ router.get('/lyrics', async (req, res) => {
     let lyrics = null;
     let source = null;
 
-    // First, try the Spotify web page if we have a URL
+    // Extract the track ID from the URL if available
+    let trackId = null;
+    if (spotifyUrl) {
+      const trackIdMatch = spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
+      trackId = trackIdMatch ? trackIdMatch[1] : null;
+    }
+
+    // First, check if we already have lyrics in the database
+    if (trackId) {
+      try {
+        const storedTrack = await trackRepository.findTrackById(trackId);
+        if (storedTrack && storedTrack.lyrics) {
+          console.log(`Found existing lyrics in database for track ${trackId}`);
+          return res.json({
+            lyrics: storedTrack.lyrics,
+            title,
+            artist,
+            source: storedTrack.lyricsSource || 'database',
+            url: spotifyUrl,
+            sourceDetail: `Retrieved from database (previously saved from ${storedTrack.lyricsSource || 'unknown source'})`
+          });
+        }
+      } catch (dbError) {
+        console.error('Error checking database for lyrics:', dbError.message);
+        // Continue to fetch lyrics from other sources if database check fails
+      }
+    }
+
+    // If no lyrics in database and we have a Spotify URL, try the Spotify web page
     if (spotifyUrl) {
       console.log(`Using Spotify URL: ${spotifyUrl}`);
 
