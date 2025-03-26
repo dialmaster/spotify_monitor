@@ -129,7 +129,8 @@ const evaluateContentAge = async (params) => {
   try {
     // Make OpenAI API request
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      // model: "gpt-4o",
+      model: "gpt-4o-mini",
       temperature: 0.2,
       messages: [
         {
