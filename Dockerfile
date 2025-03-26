@@ -1,4 +1,4 @@
-FROM node:18.17.1-slim
+FROM node:18-slim
 
 # Install dependencies for Puppeteer
 RUN apt-get update && apt-get install -y \
@@ -53,7 +53,6 @@ COPY . .
 
 # Set default config file (will be overridden by environment variable)
 ENV CONFIG_FILE=config.json
-ENV UV_USE_IO_URING=0
 
 # Expose the internal port
 EXPOSE 8888
