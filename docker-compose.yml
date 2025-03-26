@@ -2,7 +2,7 @@ services:
   spotify-monitor:
     build: .
     ports:
-      - "${PORT:-8888}:8888"
+      - "0.0.0.0:${PORT:-8888}:8888"
     volumes:
       - ${CONFIG_PATH:-./.docker-config.json}:/app/config.json:ro
       - ./logs:/app/logs

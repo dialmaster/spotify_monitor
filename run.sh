@@ -6,6 +6,16 @@ DB_USER="spotify"
 DB_PASSWORD="spotify_password"
 DB_PORT="5432"
 
+# Determine whether to use "docker compose" or "docker-compose"
+if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+  DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose &> /dev/null; then
+  DOCKER_COMPOSE="docker-compose"
+else
+  echo "Error: Neither 'docker compose' nor 'docker-compose' is available. Please install Docker with compose support."
+  exit 1
+fi
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -76,7 +86,7 @@ if ! docker ps | grep -q "spotify-shared-db"; then
   echo "Shared database not running. Starting it now..."
 
   # Start the shared database
-  docker compose -f db-compose.yml -p spotify-shared-db up -d
+  $DOCKER_COMPOSE -f db-compose.yml -p spotify-shared-db up -d
 
   # Wait for database to be ready (simple approach)
   echo "Waiting for database to be ready..."
@@ -90,8 +100,8 @@ export PORT=$PORT
 export CONFIG_PATH=$(realpath "$CONFIG_FILE")
 
 # Run docker-compose with a unique project name
-docker compose -p "$PROJECT_NAME" up -d --build
+$DOCKER_COMPOSE -p "$PROJECT_NAME" up -d --build
 
 echo "Started Spotify Monitor for user '$USERNAME' on port $PORT using config '$CONFIG_FILE'"
 echo "Using shared database with user '$DB_USER' (password not shown)"
-echo "View logs with: docker compose -p $PROJECT_NAME logs -f"
+echo "View logs with: $DOCKER_COMPOSE -p $PROJECT_NAME logs -f"

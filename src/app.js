@@ -29,7 +29,7 @@ app.use('/', authRoutes);
 app.use('/api', apiRoutes);
 
 // Start the server
-const server = app.listen(config.port, async () => {
+const server = app.listen(config.port, '0.0.0.0', async () => {
   console.log(`Server running at http://localhost:${config.port}`);
   console.log(`Using config file: ${config.getConfigPath()}`);
   console.log(`Genius API key configured: ${config.hasGeniusLyrics() ? 'Yes' : 'No (lyrics functionality may be limited)'}`);
