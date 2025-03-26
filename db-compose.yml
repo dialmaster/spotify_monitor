@@ -1,0 +1,23 @@
+services:
+  spotify-shared-db:
+    image: postgres:14
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=spotify_data
+      - POSTGRES_USER=${DB_USER:-spotify}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-spotify_password}
+    volumes:
+      - spotify-shared-db-data:/var/lib/postgresql/data
+    networks:
+      - spotify-network
+
+networks:
+  spotify-network:
+    external: true
+    name: spotify-shared-network
+
+volumes:
+  spotify-shared-db-data:
+    name: spotify-shared-db-data

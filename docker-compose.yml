@@ -9,8 +9,19 @@ services:
     restart: unless-stopped
     networks:
       - spotify-network
+    environment:
+      - DB_HOST=spotify-shared-db
+      - DB_PORT=5432
+      - DB_NAME=spotify_data
+      - DB_USER=${DB_USER:-spotify}
+      - DB_PASSWORD=${DB_PASSWORD:-spotify_password}
 
 networks:
   spotify-network:
     external: true
     name: spotify-shared-network
+
+volumes:
+  spotify-shared-db-data:
+    external: true
+    name: spotify-shared-db-data

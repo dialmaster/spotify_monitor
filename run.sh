@@ -2,6 +2,9 @@
 
 # Default values
 CONFIG_FILE="config.json"
+DB_USER="spotify"
+DB_PASSWORD="spotify_password"
+DB_PORT="5432"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -13,6 +16,18 @@ while [[ $# -gt 0 ]]; do
     --port=*)
       # Keep for backward compatibility but print a message
       echo "Note: Using port from config file instead of command-line argument"
+      shift
+      ;;
+    --db-user=*)
+      DB_USER="${1#*=}"
+      shift
+      ;;
+    --db-password=*)
+      DB_PASSWORD="${1#*=}"
+      shift
+      ;;
+    --db-port=*)
+      DB_PORT="${1#*=}"
       shift
       ;;
     *)
@@ -52,6 +67,25 @@ if ! docker network ls | grep -q "$NETWORK_NAME"; then
 fi
 
 # Export variables for docker-compose
+export DB_USER
+export DB_PASSWORD
+export DB_PORT
+
+# Check if the shared database is running
+if ! docker ps | grep -q "spotify-shared-db"; then
+  echo "Shared database not running. Starting it now..."
+
+  # Start the shared database
+  docker compose -f db-compose.yml -p spotify-shared-db up -d
+
+  # Wait for database to be ready (simple approach)
+  echo "Waiting for database to be ready..."
+  sleep 10
+else
+  echo "Using existing shared database instance"
+fi
+
+# Export variables for spotify-monitor
 export PORT=$PORT
 export CONFIG_PATH=$(realpath "$CONFIG_FILE")
 
@@ -59,4 +93,5 @@ export CONFIG_PATH=$(realpath "$CONFIG_FILE")
 docker compose -p "$PROJECT_NAME" up -d --build
 
 echo "Started Spotify Monitor for user '$USERNAME' on port $PORT using config '$CONFIG_FILE'"
+echo "Using shared database with user '$DB_USER' (password not shown)"
 echo "View logs with: docker compose -p $PROJECT_NAME logs -f"

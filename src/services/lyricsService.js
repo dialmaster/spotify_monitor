@@ -422,12 +422,12 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
         return null;
       });
 
-      // Log stats and limit to 5000 characters
+      // Log stats and limit to 10000 characters
       if (transcript) {
-        const truncatedTranscript = transcript.substring(0, 5000);
+        const truncatedTranscript = transcript.substring(0, 10000);
         const originalLength = transcript.length;
         const lineCount = transcript.split('\n').length;
-        console.log(`Successfully extracted transcript (${lineCount} lines, ${originalLength} chars, truncated to 5000 chars)`);
+        console.log(`Successfully extracted transcript (${lineCount} lines, ${originalLength} chars, truncated to 10000 chars)`);
 
         await page.close().catch(e => console.log('Error closing page:', e.message));
         await browserPool.releaseBrowser();
