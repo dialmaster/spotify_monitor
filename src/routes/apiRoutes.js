@@ -6,6 +6,22 @@ const ageEvaluationService = require('../services/ageEvaluationService');
 const logService = require('../services/logService');
 const config = require('../config');
 const trackRepository = require('../repositories/trackRepository');
+const rateLimit = require('express-rate-limit');
+
+// Configure rate limiting middleware
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // limit each IP to 30 requests per minute
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: {
+    error: 'Too many requests, please try again after a minute',
+    status: 429
+  }
+});
+
+// Apply rate limiting to all API routes
+router.use(apiLimiter);
 
 // API endpoint to get currently playing
 router.get('/currently-playing', async (req, res) => {
