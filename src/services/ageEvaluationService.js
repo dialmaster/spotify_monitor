@@ -1,7 +1,8 @@
 const OpenAI = require('openai');
 const config = require('../config');
+const aiEvaluationRepository = require('../repositories/aiEvaluationRepository');
 const trackRepository = require('../repositories/trackRepository');
-
+const spotifyService = require('./spotifyService');
 // Initialize OpenAI if API key is available
 let openai = null;
 
@@ -16,9 +17,6 @@ if (config.openAiApiKey) {
     console.log('Age evaluation feature will be disabled');
   }
 }
-
-// Store age evaluation cache
-const ageEvaluationCache = new Map();
 
 /**
  * Check if content is whitelisted
@@ -39,36 +37,8 @@ const checkWhitelist = (id, title) => {
         explanation: 'Track is in whitelist'
       }
     };
-    ageEvaluationCache.set(id, response);
     return response;
   }
-  return null;
-};
-
-/**
- * Check and get cached age evaluation
- * @param {string} id - Spotify ID of the track or episode
- * @param {string} title - Title of the track or episode
- * @returns {Object|null} - Cached evaluation result or null if not found
- */
-const getFromCache = (id, title) => {
-  // Create cache key from item ID
-  const cacheKey = id;
-
-  // Check cache
-  if (ageEvaluationCache.has(cacheKey)) {
-    console.log(`Using cached age evaluation for "${title}"`);
-    return ageEvaluationCache.get(cacheKey);
-  }
-
-  // Limit cache size (keep no more than 100 entries)
-  if (ageEvaluationCache.size >= 100) {
-    // Get the oldest key and delete it
-    const oldestKey = ageEvaluationCache.keys().next().value;
-    ageEvaluationCache.delete(oldestKey);
-    console.log('Age evaluation cache full, removed oldest entry');
-  }
-
   return null;
 };
 
@@ -136,9 +106,6 @@ const prepareContentForEvaluation = async (params) => {
  * @returns {Promise<Object>} - Raw OpenAI response
  */
 const requestAgeEvaluation = async (content, title) => {
-  console.log(`Requesting age evaluation for "${title}"`);
-
-  // Make OpenAI API request
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0.2,
@@ -180,19 +147,14 @@ DO NOT wrap your response in markdown code blocks.`,
  * @param {string} type - Content type
  * @returns {Object} - Parsed response with confidence information
  */
-const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotifyUrl, type) => {
+const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotifyUrl, type, spotifyUser) => {
   // Get raw content from completion
   let rawContent = completion.choices[0].message.content;
-
-  // Log the raw response from OpenAI
-  console.log('Raw OpenAI response:', rawContent);
 
   // Remove markdown code blocks if present
   let cleanedContent = rawContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   // Also handle the case where it just uses ``` without specifying the language
   cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-
-  console.log('Cleaned content for parsing:', cleanedContent);
 
   let response;
   try {
@@ -234,8 +196,6 @@ const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotif
   // Safely check if spotifyUrl exists and contains spotify.com
   const fromSpotify = spotifyUrl && spotifyUrl.includes('spotify.com');
 
-  console.log('lyricsSource', lyricsSource);
-
   if (lyricsSource && lyricsSource.includes('spotify')) {
     confidenceLevel = 'HIGH';
     confidenceExplanation = type === 'track'
@@ -256,7 +216,15 @@ const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotif
   };
 
   // Store in cache
-  ageEvaluationCache.set(id, response);
+  aiEvaluationRepository.saveEvaluation({
+    spotifyTrackId: id,
+    spotifyUserId: spotifyUser.id,
+    ageRating: response.ageRating,
+    explanation: response.explanation,
+    level: response.level,
+    confidenceLevel: response.confidence.level,
+    confidenceExplanation: response.confidence.explanation
+  });
 
   return response;
 };
@@ -275,44 +243,48 @@ const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotif
 const evaluateContentAge = async (params) => {
   const { id, type, title, spotifyUrl } = params;
 
-  // Basic validation
   if (!id || !type || !title) {
     throw new Error('Missing required parameters: id, type, and title');
   }
 
-  // 1. Check if whitelisted
   const whitelistResult = checkWhitelist(id, title);
   if (whitelistResult) {
     return whitelistResult;
   }
 
-  // Check if OpenAI is configured
+  const spotifyUser = await spotifyService.getCurrentUserProfile();
+
+  const cachedResult = await aiEvaluationRepository.findEvaluation(id, spotifyUser.id);
+
+  if (cachedResult) {
+    // Return cached result in the SAME FORMAT as the OpenAI response
+    const resultObject = {
+      ageRating: cachedResult.ageRating,
+      explanation: cachedResult.explanation,
+      level: cachedResult.level,
+      confidence: {
+        level: cachedResult.confidenceLevel,
+        explanation: cachedResult.confidenceExplanation
+      }
+    };
+    return resultObject;
+  }
+
   if (!openai) {
     throw new Error('OpenAI API not configured');
   }
 
-  // 2. Check if in cache
-  const cachedResult = getFromCache(id, title);
-  if (cachedResult) {
-    return cachedResult;
-  }
-
-  // 3. Get lyrics/content and prepare for evaluation
   const { content, lyricsSource } = await prepareContentForEvaluation(params);
 
   try {
-    // 4. Make OpenAI request
     const completion = await requestAgeEvaluation(content, title);
-
-    // 5. Parse response and generate evaluation
-    return parseResponseAndGenerateEvaluation(completion, id, lyricsSource, spotifyUrl, type);
+    return parseResponseAndGenerateEvaluation(completion, id, lyricsSource, spotifyUrl, type, spotifyUser);
   } catch (error) {
     console.error('Age evaluation API error:', error.message);
     throw error;
   }
 };
 
-// Check if age evaluation is available
 const isAgeEvaluationAvailable = () => {
   return !!openai;
 };

@@ -6,6 +6,10 @@ module.exports = (sequelize, DataTypes) => {
   class Track extends Model {
     static associate(models) {
       // Define associations here
+      Track.hasMany(models.AiEvaluation, {
+        foreignKey: 'spotify_track_id',
+        sourceKey: 'trackId'
+      });
     }
   }
 

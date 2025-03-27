@@ -9,7 +9,7 @@ module.exports = {
     host: process.env.POSTGRES_HOST || 'spotify-shared-db',
     port: parseInt(process.env.POSTGRES_PORT || '5432'),
     dialect: 'postgres',
-    logging: console.log
+    logging: false
   },
   production: {
     username: process.env.POSTGRES_USER || 'spotify',
