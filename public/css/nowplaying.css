@@ -243,7 +243,7 @@
 
   /* Responsive transcript container */
   #podcast-transcript-content {
-    max-height: 250px;
+    max-height: 200px;
     font-size: 0.9rem;
     padding: 10px;
   }

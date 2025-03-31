@@ -85,8 +85,9 @@ const prepareContentForEvaluation = async (params) => {
     }
   }
 
-  // Truncate content to 12000 characters if needed
-  const MAX_CONTENT_LENGTH = 12000;
+  // Truncate content to 30000 characters if needed
+  // Good enough for a pretty good evaluation for podcasts
+  const MAX_CONTENT_LENGTH = 30000;
   let truncationMessage = '';
 
   if (content.length > MAX_CONTENT_LENGTH) {
