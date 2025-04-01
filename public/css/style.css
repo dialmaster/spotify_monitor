@@ -449,7 +449,7 @@ h3 {
   }
 
   .info-container {
-    min-width: 100%;
+    max-width: 100%;
   }
 
   #history-container {
