@@ -4,8 +4,10 @@ const spotifyService = require('../services/spotifyService');
 const lyricsService = require('../services/lyricsService');
 const ageEvaluationService = require('../services/ageEvaluationService');
 const logService = require('../services/logService');
+const recentlyPlayedService = require('../services/recentlyPlayed');
 const config = require('../config');
 const trackRepository = require('../repositories/trackRepository');
+const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
 const rateLimit = require('express-rate-limit');
 
 // Configure rate limiting middleware
@@ -87,17 +89,14 @@ router.get('/recently-played', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // Only fetch new data every 5 minutes
-    const fiveMinutesMs = 5 * 60 * 1000;
-    let playHistory = spotifyService.getCachedData.playHistory();
-    const lastHistoryFetch = spotifyService.getCachedData.lastHistoryFetch();
-
-    if (!playHistory || Date.now() - lastHistoryFetch > fiveMinutesMs) {
-      await spotifyService.getRecentlyPlayed();
-      playHistory = spotifyService.getCachedData.playHistory();
+    try {
+      // Get recently played tracks using the service
+      const mergedHistory = await recentlyPlayedService.getRecentlyPlayed(25);
+      res.json(mergedHistory);
+    } catch (error) {
+      console.error('Error retrieving recently played history:', error.message);
+      res.status(500).json({ error: 'Error retrieving play history' });
     }
-
-    res.json(playHistory || []);
   } catch (error) {
     console.error('API error:', error.message);
     res.status(500).json({ error: 'Internal server error' });

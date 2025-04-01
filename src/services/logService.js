@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('../config');
 const callMeBotService = require('./callMeBotService');
+const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
 
 // Map to track currently playing items to avoid duplicate logging
 let trackingMap = new Map();
@@ -64,6 +65,12 @@ const logPlaybackStarted = (item, type) => {
 
   // Add basic metadata
   logMessage += ` [id: ${item.id}]`;
+
+  recentlyPlayedRepository.addRecentlyPlayed(
+    item.spotifyUserId,
+    item.id,
+    new Date()
+  );
 
   // Write to log file
   fs.appendFileSync(logFile, logMessage + '\n');

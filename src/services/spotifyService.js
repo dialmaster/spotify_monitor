@@ -3,6 +3,7 @@ const querystring = require('querystring');
 const config = require('../config');
 const logService = require('./logService');
 const trackRepository = require('../repositories/trackRepository');
+const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
 
 // Helper function to generate a random string for state
 const generateRandomString = (length) => {
@@ -227,8 +228,9 @@ const getCurrentlyPlaying = async () => {
     // Store the current playback for the API
     currentPlayback = playbackData;
 
-    // Save to database if it's a track or episode
+    // Check if something is playing and we have a valid item
     if (playbackData.playing && playbackData.item && playbackData.item.id) {
+      // First save the track to database
       try {
         const trackData = {
           trackId: playbackData.item.id,
@@ -242,16 +244,17 @@ const getCurrentlyPlaying = async () => {
           trackData.artist = playbackData.item.artists.map(artist => artist.name).join(', ');
           trackData.album = playbackData.item.album?.name;
           trackData.albumArt = playbackData.item.album?.images?.[0]?.url;
+          trackData.imageUrl = playbackData.item.album?.images?.[0]?.url;
         }
         // Handle episode-specific fields
         else if (playbackData.type === 'episode') {
           trackData.artist = playbackData.item.show?.publisher;
           trackData.album = playbackData.item.show?.name;
           trackData.albumArt = playbackData.item.images?.[0]?.url;
+          trackData.imageUrl = playbackData.item.images?.[0]?.url;
           trackData.description = playbackData.item.description;
         }
 
-        console.log(`Saving ${playbackData.type} data to database: ${trackData.title}`);
         const result = await trackRepository.saveTrack(trackData);
         if (result.created) {
           console.log(`New ${playbackData.type} saved to database with ID: ${trackData.trackId}`);
@@ -375,7 +378,6 @@ const skipToNextTrack = async () => {
 // Monitor function
 const monitorCurrentlyPlaying = async () => {
   try {
-    console.log('\n--- Checking currently playing status ---');
     const data = await getCurrentlyPlaying();
 
     if (!data) {
@@ -386,18 +388,21 @@ const monitorCurrentlyPlaying = async () => {
     const timestamp = new Date().toISOString();
 
     if (!data.playing) {
-      console.log(`[${timestamp}] Nothing is currently playing`);
       // Clean up tracking when nothing is playing
       logService.cleanupTracking(null);
       return;
     }
 
     const progress = Math.floor(data.progress_ms / 1000);
+    // Make sure we have user information
+    if (!userInfo.id) {
+      await getCurrentUserProfile();
+    }
+    data.item.spotifyUserId = userInfo.id;
 
     if (data.type === 'track' && data.item) {
       const duration = Math.floor(data.item.duration_ms / 1000);
       console.log(`[${timestamp}] Now playing: ${data.item.name} by ${data.item.artists.map(artist => artist.name).join(', ')} (${progress}s / ${duration}s)`);
-
       // Log playback to file (will only log new tracks)
       logService.logPlaybackStarted(data.item, 'track');
     } else if (data.type === 'episode') {
@@ -410,11 +415,6 @@ const monitorCurrentlyPlaying = async () => {
 
         // Log podcast playback to file (will only log new episodes)
         logService.logPlaybackStarted(data.item, 'episode');
-
-        // Log description if available
-        if (data.item.description) {
-          console.log(`Episode description: ${data.item.description.slice(0, 200)}${data.item.description.length > 200 ? '...' : ''}`);
-        }
       } else {
         console.log(`[${timestamp}] Now playing podcast episode (${progress}s elapsed)`);
       }

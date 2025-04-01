@@ -18,7 +18,8 @@ async function saveTrack(trackData) {
       lyricsSource: trackData.lyricsSource,
       description: trackData.description,
       albumArt: trackData.albumArt,
-      duration: trackData.duration
+      duration: trackData.duration,
+      imageUrl: trackData.imageUrl
     });
 
     return {

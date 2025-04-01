@@ -67,6 +67,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true,
       comment: 'Duration in milliseconds'
+    },
+    imageUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'URL to track image from Spotify',
+      field: 'image_url'
     }
   }, {
     sequelize,

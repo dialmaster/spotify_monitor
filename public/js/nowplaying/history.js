@@ -82,13 +82,51 @@ const History = (() => {
           duration = Utils.formatTime(content.duration_ms);
         }
 
+        // AI Evaluation HTML
+        let aiEvaluationHtml = '';
+        if (item.aiEvaluation) {
+          const { ageRating, level, confidenceLevel } = item.aiEvaluation;
+          if (ageRating && level) {
+            aiEvaluationHtml = `
+              <div class="history-ai-section">
+                <div class="history-section-label">AI Evaluation</div>
+                <div class="history-ai-evaluation">
+                  <div class="history-age-rating">${ageRating}</div>
+                  <div class="history-age-level age-level-${level}">${level}</div>
+                  ${confidenceLevel ? `<div class="history-confidence confidence-${confidenceLevel}">${confidenceLevel}</div>` : ''}
+                </div>
+              </div>
+            `;
+          }
+        } else {
+          aiEvaluationHtml = `
+            <div class="history-ai-section">
+              <div class="history-section-label">AI Evaluation</div>
+              <div class="history-ai-not-available">Not available for this item</div>
+            </div>
+          `;
+        }
+
         historyItemEl.innerHTML = `
-          <img class="history-art" src="${imageUrl}" alt="${isTrack ? 'Album' : 'Podcast'} Art">
-          <div class="history-info">
-            <div class="history-title">${content.name || 'Unknown Title'}</div>
-            <div class="history-artist">${artistNames || 'Unknown Artist'}</div>
-            <div class="history-description">${description}</div>
-            <div class="history-meta">Played: ${playedAt} ${duration ? `• Duration: ${duration}` : ''}</div>
+          <div class="history-item-content">
+            <img class="history-art" src="${imageUrl}" alt="${isTrack ? 'Album' : 'Podcast'} Art">
+            <div class="history-info">
+              <div class="history-header">
+                <div class="history-title-artist">
+                  <div class="history-title">${content.name || 'Unknown Title'}</div>
+                  <div class="history-artist">${artistNames || 'Unknown Artist'}</div>
+                </div>
+                <div class="history-meta">
+                  <div>Played: ${playedAt}</div>
+                  ${duration ? `<div>Duration: ${duration}</div>` : ''}
+                </div>
+              </div>
+              <div class="history-album-info">
+                ${isTrack && content.album ? `<div class="history-album">${content.album.name}</div>` : ''}
+                ${!isTrack && content.show ? `<div class="history-show">${content.show.name}</div>` : ''}
+              </div>
+              ${aiEvaluationHtml}
+            </div>
           </div>
         `;
 
