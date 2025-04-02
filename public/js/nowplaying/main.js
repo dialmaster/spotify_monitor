@@ -6,9 +6,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const lyrics = Lyrics.initialize(elements, ui);
   const transcript = Transcript.initialize(elements, ui);
   const ageEvaluation = AgeEvaluation.initialize(elements, ui);
-  const player = Player.initialize(elements, ui);
-  const history = History.initialize(elements);
+
+  // Initialize history modal module
+  const historyModal = HistoryModal.initialize(elements);
+
+  // Initialize history module with modal
+  const history = History.initialize(elements, historyModal);
+
   const userProfile = UserProfile.initialize(elements);
+  const player = Player.initialize(elements, ui);
 
   // Connect related modules
   player.setLyricsModule(lyrics);

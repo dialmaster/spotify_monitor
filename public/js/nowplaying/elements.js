@@ -76,6 +76,26 @@ const Elements = (() => {
     elements.podcastAgeErrorEl = document.getElementById('podcast-age-error');
     elements.podcastConfidenceLevelEl = document.getElementById('podcast-confidence-level');
 
+    // Modal elements
+    elements.historyDetailsModal = document.getElementById('history-details-modal');
+    elements.modalTitle = document.getElementById('modal-title');
+    elements.modalCloseBtn = document.getElementById('modal-close-btn');
+    elements.modalArt = document.getElementById('modal-art');
+    elements.modalArtist = document.getElementById('modal-artist');
+    elements.modalAlbum = document.getElementById('modal-album');
+    elements.modalPlayedAt = document.getElementById('modal-played-at');
+    elements.modalSpotifyLink = document.getElementById('modal-spotify-link');
+    elements.modalAgeContainer = document.getElementById('modal-age-container');
+    elements.modalAgeRating = document.getElementById('modal-age-rating');
+    elements.modalAgeLevel = document.getElementById('modal-age-level');
+    elements.modalConfidenceLevel = document.getElementById('modal-confidence-level');
+    elements.modalConfidenceText = document.getElementById('modal-confidence-text');
+    elements.modalConfidenceExplanation = document.getElementById('modal-confidence-explanation');
+    elements.modalAgeExplanation = document.getElementById('modal-age-explanation');
+    elements.modalLyricsContainer = document.getElementById('modal-lyrics-container');
+    elements.modalLyricsContent = document.getElementById('modal-lyrics-content');
+    elements.modalLyricsNotFound = document.getElementById('modal-lyrics-not-found');
+
     return elements;
   };
 

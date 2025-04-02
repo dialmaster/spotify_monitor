@@ -66,6 +66,20 @@
             </div>
           </div>
           <div class="info-section">
+            <div id="track-age-container" class="age-container hidden">
+                <h3>AI Evaluation</h3>
+                <div id="track-age-loading" class="age-loading">Evaluating track appropriateness with AI...</div>
+                <div id="track-age-content" class="age-content hidden">
+                  <div class="age-rating-container">
+                    <div class="age-rating" id="track-age-rating"></div>
+                    <div class="age-level" id="track-age-level"></div>
+                    <div class="confidence-level" id="track-confidence-level"></div>
+                  </div>
+                  <div class="age-explanation" id="track-age-explanation"></div>
+                </div>
+                <div id="track-age-error" class="age-error hidden">Unable to evaluate content</div>
+            </div>
+
             <div id="lyrics-container" class="hidden">
               <h3>Lyrics</h3>
               <div id="lyrics-loading">Attempting to fetch lyrics...</div>
@@ -76,19 +90,6 @@
               </div>
             </div>
 
-            <div id="track-age-container" class="age-container hidden">
-              <h3>AI Evaluation</h3>
-              <div id="track-age-loading" class="age-loading">Evaluating track appropriateness with AI...</div>
-              <div id="track-age-content" class="age-content hidden">
-                <div class="age-rating-container">
-                  <div class="age-rating" id="track-age-rating"></div>
-                  <div class="age-level" id="track-age-level"></div>
-                  <div class="confidence-level" id="track-confidence-level"></div>
-                </div>
-                <div class="age-explanation" id="track-age-explanation"></div>
-              </div>
-              <div id="track-age-error" class="age-error hidden">Unable to evaluate content</div>
-            </div>
           </div>
         </div>
       </div>
@@ -161,6 +162,56 @@
     </div>
   </div>
 
+  <!-- History Details Modal -->
+  <div id="history-details-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title"></h2>
+        <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-info-container">
+          <div class="modal-art-container">
+            <img id="modal-art" src="" alt="Track Art">
+          </div>
+          <div class="modal-info">
+            <div class="artist-album-container">
+              <h3 id="modal-artist"></h3>
+              <p id="modal-album"></p>
+            </div>
+            <p id="modal-played-at"></p>
+            <a id="modal-spotify-link" href="#" target="_blank" class="spotify-link">
+              <img src="/img/spotify-icon.png" alt="Spotify" class="spotify-icon"> Open in Spotify
+            </a>
+          </div>
+        </div>
+
+        <div id="modal-age-container" class="age-container hidden">
+          <h3>AI Evaluation</h3>
+          <div class="age-content">
+            <div class="age-rating-container">
+              <div class="age-rating" id="modal-age-rating"></div>
+              <div class="age-level" id="modal-age-level"></div>
+              <div class="confidence-level" id="modal-confidence-level">
+                <span id="modal-confidence-text"></span>
+                <div class="confidence-info">?
+                  <div class="confidence-tooltip" id="modal-confidence-explanation"></div>
+                </div>
+              </div>
+            </div>
+            <div class="age-explanation" id="modal-age-explanation"></div>
+          </div>
+        </div>
+
+        <div id="modal-lyrics-container" class="hidden">
+          <h3>Lyrics</h3>
+          <div id="modal-lyrics-content"></div>
+          <div id="modal-lyrics-not-found" class="hidden">Lyrics not available</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/nowplaying/utils.js" defer></script>
   <script src="/js/nowplaying/elements.js" defer></script>
   <script src="/js/nowplaying/toast.js" defer></script>
@@ -170,6 +221,7 @@
   <script src="/js/nowplaying/age-evaluation.js" defer></script>
   <script src="/js/nowplaying/player.js" defer></script>
   <script src="/js/nowplaying/history.js" defer></script>
+  <script src="/js/nowplaying/history-modal.js" defer></script>
   <script src="/js/nowplaying/user-profile.js" defer></script>
   <script src="/js/nowplaying/main.js" defer></script>
 </body>

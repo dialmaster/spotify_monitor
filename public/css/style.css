@@ -236,6 +236,10 @@ h3 {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+#history-list {
+  margin-top: 1rem;
+}
+
 #history-container h2 {
   color: #1DB954;
   margin-bottom: 1.5rem;
@@ -250,62 +254,114 @@ h3 {
 
 .history-item {
   display: flex;
-  padding: 1rem 0;
-  border-bottom: 1px solid #333;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  background-color: #1e1e1e;
+  background-image: linear-gradient(to bottom, #222, #1d1d1d);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.history-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .history-item:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .history-item-content {
   display: flex;
+  flex-direction: column;
   width: 100%;
+}
+
+.history-top-row {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  position: relative;
 }
 
 .history-art {
   width: 60px;
   height: 60px;
-  border-radius: 4px;
+  border-radius: 6px;
   margin-right: 1rem;
   object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.history-info {
+.history-main-content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
 }
 
 .history-title-artist {
-  flex: 1;
-  margin-right: 1rem;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .history-title {
   font-weight: bold;
   font-size: 1.1rem;
-  margin-bottom: 0.2rem;
   color: #fff;
 }
 
 .history-artist {
   color: #1DB954;
   font-size: 0.9rem;
-  margin-bottom: 0.2rem;
+}
+
+.history-ai-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.history-ai-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.show-details-btn {
+  background-color: #1DB954;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 15px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin-left: auto;
+}
+
+.show-details-btn:hover {
+  background-color: #1ed760;
+  transform: scale(1.05);
+}
+
+.show-details-btn:active {
+  transform: scale(0.98);
 }
 
 .history-album-info {
   font-size: 0.9rem;
   color: #b3b3b3;
-  margin-bottom: 0.2rem;
+  margin: 0.2rem 0 0.4rem;
 }
 
 .history-album, .history-show {
@@ -313,22 +369,19 @@ h3 {
 }
 
 .history-meta {
+  display: flex;
+  gap: 1rem;
   color: #777;
   font-size: 0.8rem;
-  text-align: right;
-  white-space: nowrap;
+  margin-top: 0.3rem;
 }
 
 .history-section-label {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: bold;
   color: #b3b3b3;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0;
   text-transform: uppercase;
-}
-
-.history-ai-section {
-  margin-top: 0.3rem;
 }
 
 .history-ai-not-available {
@@ -543,6 +596,30 @@ h3 {
   .time-display {
     font-size: 0.85rem;
   }
+
+  .history-title {
+    font-size: 1rem;
+  }
+
+  .history-artist {
+    font-size: 0.85rem;
+  }
+
+  .history-art {
+    width: 50px;
+    height: 50px;
+  }
+
+  .show-details-btn {
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    margin-top: 0.4rem;
+  }
+
+  .history-item {
+    padding: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
 }
 
 @media (max-width: 576px) {
@@ -675,26 +752,60 @@ h3 {
     text-align: left;
     margin-top: 0.3rem;
   }
+
+  .history-title-artist {
+    /* Remove margin-right since we moved the button */
+  }
+
+  .history-art {
+    width: 45px;
+    height: 45px;
+    margin-right: 0.75rem;
+  }
+
+  .show-details-btn {
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    margin-top: 0.3rem;
+  }
+
+  .history-meta {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .history-item {
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
 }
 
 @media (max-width: 480px) {
   .history-item {
-    padding: 0.75rem 0;
+    padding: 0.65rem;
+    margin-bottom: 0.65rem;
   }
 
   .history-art {
-    width: 50px;
-    height: 50px;
-    margin-right: 0.75rem;
+    width: 40px;
+    height: 40px;
+    margin-right: 0.5rem;
   }
 
-  .art-container img {
-    max-width: 60%;
-    max-height: 150px;
+  .history-title {
+    font-size: 0.9rem;
   }
 
-  .time-display {
+  .history-artist {
     font-size: 0.8rem;
+  }
+
+  .history-album-info {
+    font-size: 0.8rem;
+  }
+
+  .history-meta {
+    font-size: 0.75rem;
   }
 
   .age-rating {

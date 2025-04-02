@@ -177,6 +177,15 @@ const enrichWithAiEvaluation = async (mergedHistory, userId) => {
       // Fetch AI evaluation for the track
       const evaluation = await aiEvaluationRepository.findEvaluation(trackId, userId);
 
+      // Fetch track data to get lyrics
+      const trackData = await trackRepository.findTrackById(trackId);
+
+      let lyrics = null;
+      if (trackData && trackData.lyrics) {
+        // Limit lyrics to first 5000 characters
+        lyrics = trackData.lyrics.substring(0, 5000);
+      }
+
       if (evaluation) {
         // Add AI evaluation data to the item
         return {
@@ -184,8 +193,17 @@ const enrichWithAiEvaluation = async (mergedHistory, userId) => {
           aiEvaluation: {
             ageRating: evaluation.ageRating,
             level: evaluation.level,
-            confidenceLevel: evaluation.confidenceLevel
-          }
+            confidenceLevel: evaluation.confidenceLevel,
+            confidenceExplanation: evaluation.confidenceExplanation,
+            explanation: evaluation.explanation
+          },
+          lyrics: lyrics
+        };
+      } else if (lyrics) {
+        // If no evaluation but we have lyrics, still return those
+        return {
+          ...item,
+          lyrics: lyrics
         };
       }
     } catch (error) {
