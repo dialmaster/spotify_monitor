@@ -153,11 +153,12 @@ The app has different levels of functionality depending on which API keys you co
      - **Make the script executable**:
        ```bash
        chmod +x run.sh
+       chmod +x stop.sh
        ```
 
      - **Run an instance using a config file**:
        ```bash
-       ./run.sh --config=config.json
+       ./run.sh config.json
        ```
        The script will automatically use the port specified in your config file
 
@@ -167,8 +168,8 @@ The app has different levels of functionality depending on which API keys you co
 
        *Each config file MUST specify a different port value!*
        ```bash
-       ./run.sh --config=config.firstconfig.json
-       ./run.sh --config=config.secondconfig.json
+       ./run.sh config.firstconfig.json
+       ./run.sh config.secondconfig.json
        ```
        Each instance will run in a separate container with its own port
 
@@ -182,11 +183,11 @@ The app has different levels of functionality depending on which API keys you co
 
      - **Stop a specific instance**:
        ```bash
-       docker compose -p spotify-monitor-username down
+       ./stop.sh spotify-monitor-username
        ```
        Replace "username" with the Spotify username used in your config (lowercase).
 
-       For example: `docker compose -p spotify-monitor-grant down`
+       For example: `./stop.sh spotify-monitor-grant`
 
      - **View container logs**:
        ```bash

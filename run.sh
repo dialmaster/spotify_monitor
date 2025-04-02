@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Default values
-CONFIG_FILE="config.json"
 DB_USER="spotify"
 DB_PASSWORD="spotify_password"
 DB_PORT="5432"
@@ -16,13 +15,20 @@ else
   exit 1
 fi
 
-# Parse command line arguments
+# Check if config file is provided as argument
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <config_file>"
+  echo "Available config files:"
+  ls -1 *.json
+  exit 1
+fi
+
+CONFIG_FILE="$1"
+
+# Handle remaining command line arguments for backwards compatibility
+shift
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --config=*)
-      CONFIG_FILE="${1#*=}"
-      shift
-      ;;
     --port=*)
       # Keep for backward compatibility but print a message
       echo "Note: Using port from config file instead of command-line argument"
@@ -98,6 +104,13 @@ fi
 # Export variables for spotify-monitor
 export PORT=$PORT
 export CONFIG_PATH=$(realpath "$CONFIG_FILE")
+
+# Check if the project is already running
+if $DOCKER_COMPOSE ls | grep -q "$PROJECT_NAME"; then
+  echo "Container for $CONFIG_FILE is already running!"
+  echo "To stop it, use: ./stop.sh $PROJECT_NAME"
+  exit 0
+fi
 
 # Run docker-compose with a unique project name
 $DOCKER_COMPOSE -p "$PROJECT_NAME" up -d --build
