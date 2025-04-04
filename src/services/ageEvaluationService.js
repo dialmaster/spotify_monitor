@@ -292,5 +292,6 @@ const isAgeEvaluationAvailable = () => {
 
 module.exports = {
   evaluateContentAge,
-  isAgeEvaluationAvailable
+  isAgeEvaluationAvailable,
+  checkWhitelist
 };

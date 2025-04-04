@@ -110,7 +110,25 @@ const HistoryModal = (() => {
     if (item.aiEvaluation) {
       const { ageRating, level, confidenceLevel, confidenceExplanation, explanation } = item.aiEvaluation;
 
-      if (ageRating && level) {
+      if (ageRating === 'Whitelisted') {
+        // Special handling for whitelisted content
+        elements.modalAgeContainer.classList.remove('hidden');
+        elements.modalAgeRating.textContent = 'Whitelisted';
+        elements.modalAgeLevel.textContent = level || 'WARNING';
+        elements.modalAgeLevel.className = `age-level age-level-${level || 'WARNING'}`;
+
+        if (confidenceLevel) {
+          elements.modalConfidenceLevel.classList.remove('hidden');
+          elements.modalConfidenceText.textContent = confidenceLevel;
+          elements.modalConfidenceLevel.className = `confidence-level confidence-${confidenceLevel}`;
+
+          elements.modalConfidenceExplanation.textContent = confidenceExplanation || 'Track is in whitelist';
+        } else {
+          elements.modalConfidenceLevel.classList.add('hidden');
+        }
+
+        elements.modalAgeExplanation.textContent = explanation || 'This content has been whitelisted by the administrator.';
+      } else if (ageRating && level) {
         elements.modalAgeContainer.classList.remove('hidden');
         elements.modalAgeRating.textContent = ageRating;
         elements.modalAgeLevel.textContent = level;

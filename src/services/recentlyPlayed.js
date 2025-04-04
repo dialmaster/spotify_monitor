@@ -2,6 +2,7 @@ const spotifyService = require('./spotifyService');
 const trackRepository = require('../repositories/trackRepository');
 const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
 const aiEvaluationRepository = require('../repositories/aiEvaluationRepository');
+const ageEvaluationService = require('./ageEvaluationService');
 
 /**
  * Checks if user is authenticated with Spotify
@@ -168,6 +169,7 @@ const enrichWithAiEvaluation = async (mergedHistory, userId) => {
   const enrichedHistory = await Promise.all(mergedHistory.map(async (item) => {
     // Get track ID
     const trackId = item.track ? item.track.id : (item.episode ? item.episode.id : null);
+    const title = item.track ? item.track.name : (item.episode ? item.episode.name : 'Unknown');
 
     if (!trackId) {
       return item;
@@ -199,12 +201,29 @@ const enrichWithAiEvaluation = async (mergedHistory, userId) => {
           },
           lyrics: lyrics
         };
-      } else if (lyrics) {
-        // If no evaluation but we have lyrics, still return those
-        return {
-          ...item,
-          lyrics: lyrics
-        };
+      } else {
+        // Check if the track is whitelisted
+        const whitelistResult = ageEvaluationService.checkWhitelist(trackId, title);
+        if (whitelistResult) {
+          // If whitelisted, add the whitelisted evaluation data
+          return {
+            ...item,
+            aiEvaluation: {
+              ageRating: whitelistResult.ageRating,
+              level: whitelistResult.level,
+              confidenceLevel: whitelistResult.confidence.level,
+              confidenceExplanation: whitelistResult.confidence.explanation,
+              explanation: whitelistResult.explanation
+            },
+            lyrics: lyrics
+          };
+        } else if (lyrics) {
+          // If no evaluation but we have lyrics, still return those
+          return {
+            ...item,
+            lyrics: lyrics
+          };
+        }
       }
     } catch (error) {
       console.error(`Error fetching AI evaluation for track ${trackId}:`, error.message);

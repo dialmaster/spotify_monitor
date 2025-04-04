@@ -390,6 +390,13 @@ h3 {
   font-style: italic;
 }
 
+/* Special style for whitelisted items */
+.whitelisted-item {
+  color: #1DB954;
+  font-weight: bold;
+  font-style: normal;
+}
+
 .history-ai-evaluation {
   display: flex;
   flex-wrap: wrap;

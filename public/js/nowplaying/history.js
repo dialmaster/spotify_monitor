@@ -106,12 +106,24 @@ const History = (() => {
               </div>
             `;
           } else {
-            aiEvaluationHtml = `
-              <div class="history-ai-section">
-                <div class="history-ai-not-available">AI evaluation not available</div>
-                <button class="show-details-btn">View details</button>
-              </div>
-            `;
+            // Check if the item is whitelisted
+            if (item.aiEvaluation.ageRating === 'Whitelisted') {
+              aiEvaluationHtml = `
+                <div class="history-ai-section">
+                  <div class="history-ai-left">
+                    <div class="history-ai-not-available whitelisted-item">Item is whitelisted</div>
+                  </div>
+                  <button class="show-details-btn">View details</button>
+                </div>
+              `;
+            } else {
+              aiEvaluationHtml = `
+                <div class="history-ai-section">
+                  <div class="history-ai-not-available">AI evaluation not available</div>
+                  <button class="show-details-btn">View details</button>
+                </div>
+              `;
+            }
           }
         } else {
           aiEvaluationHtml = `
