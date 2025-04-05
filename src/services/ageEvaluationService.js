@@ -202,7 +202,7 @@ const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotif
     confidenceExplanation = type === 'track'
       ? 'We have official lyrics from Spotify'
       : 'We have an official transcript from Spotify';
-  } else if (lyricsSource.includes('genius')) {
+  } else if (lyricsSource && lyricsSource.includes('genius')) {
     confidenceLevel = 'MEDIUM';
     confidenceExplanation = 'We have third-party lyrics from Genius';
   } else {

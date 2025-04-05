@@ -14,6 +14,9 @@ Spotify Account Monitor is a comprehensive web application that allows parents a
 - **Activity Logging**: Automatically creates detailed logs of all playback activity, age evaluations, and content blocks for review and record-keeping
 - **Signal Notifications**: Sends real-time alerts via Signal messaging app when inappropriate content is detected or blocked
 - **Whitelist**: Supports whitelisting specific tracks to bypass age evaluation
+- **Database Storage**: Uses PostgreSQL to store track information, lyrics, transcripts, recently played history, and AI evaluations
+- **Enhanced History**: View detailed history with modal windows showing full lyrics and AI evaluations
+- **Confidence Levels**: AI evaluations include confidence ratings (HIGH/MEDIUM/LOW) based on lyrics source quality
 
 This tool helps parents make informed decisions about their children's music and podcast consumption while providing a seamless monitoring experience.
 
@@ -44,6 +47,7 @@ The app has different levels of functionality depending on which API keys you co
   - All basic features
   - AI-powered age appropriateness evaluations for songs and podcasts
   - Auto-skip functionality for blocked content when enabled
+  - Uses GPT-4o-mini model for efficient and cost-effective evaluations
   - Note: Without this, the age evaluation feature will be disabled
 
 - **With CallMeBot Signal API**:
@@ -56,7 +60,7 @@ The app has different levels of functionality depending on which API keys you co
 **Note**: *This application has only been tested in WSL2 on Windows, but should work fine in Linux as well*
 
 - Node.js 14 or higher
-- Docker and Docker Compose (for running with the provided run.sh script)
+- Docker and Docker Compose (for running with the provided run.sh and stop.sh scripts)
 - npm or yarn
 
 ## Setup Instructions
