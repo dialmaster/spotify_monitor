@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const config = require('./config');
 const browserPool = require('./utils/browserPool');
 const dbService = require('./services/dbService');
+const spotifyService = require('./services/spotifyService');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -54,16 +55,58 @@ const server = app.listen(config.port, '0.0.0.0', async () => {
 
   // Initialize database connection and run migrations
   try {
-    const { models } = await dbService.initializeDb();
-    console.log('Database initialized with Sequelize models');
+    // Try to connect to the database with retries
+    let dbConnected = false;
+    let retryCount = 0;
+    const maxRetries = 5;
 
-    const dbConnected = await dbService.testConnection();
-    console.log(`Database connection: ${dbConnected ? 'Successful' : 'Failed'}`);
+    while (!dbConnected && retryCount < maxRetries) {
+      console.log(`Database connection attempt ${retryCount + 1}/${maxRetries}...`);
 
-    // Log available models
-    console.log('Available Sequelize models:', Object.keys(models).filter(key => key !== 'sequelize' && key !== 'Sequelize'));
+      try {
+        await dbService.initializeDb();
+        console.log('Database initialized with Sequelize models');
+
+        dbConnected = await dbService.testConnection();
+        console.log(`Database connection: ${dbConnected ? 'Successful' : 'Failed'}`);
+
+        if (dbConnected) {
+          console.log('Initializing Spotify service...');
+          try {
+            const spotifyInitialized = await spotifyService.initialize();
+            if (spotifyInitialized) {
+              console.log('Successfully initialized Spotify service with saved tokens');
+              spotifyService.startMonitoring();
+            } else {
+              console.log('No valid Spotify tokens found, please authenticate via the web interface');
+            }
+          } catch (spotifyError) {
+            console.error('Error initializing Spotify service:', spotifyError.message);
+          }
+        } else {
+          retryCount++;
+          if (retryCount < maxRetries) {
+            console.log(`Waiting before retry ${retryCount}/${maxRetries}...`);
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+          }
+        }
+      } catch (initError) {
+        console.error('Error initializing database:', initError);
+        retryCount++;
+        if (retryCount < maxRetries) {
+          console.log(`Waiting before retry ${retryCount}/${maxRetries}...`);
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+        }
+      }
+    }
+
+    if (!dbConnected) {
+      console.error('Failed to connect to the database after maximum retry attempts. Exiting application.');
+      process.exit(1);
+    }
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('Fatal error during application startup:', error);
+    process.exit(1);
   }
 
   // Start browser pool idle checking

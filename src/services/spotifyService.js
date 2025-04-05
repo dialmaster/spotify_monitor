@@ -4,6 +4,7 @@ const config = require('../config');
 const logService = require('./logService');
 const trackRepository = require('../repositories/trackRepository');
 const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
+const spotifyAuthRepository = require('../repositories/spotifyAuthRepository');
 
 // Helper function to generate a random string for state
 const generateRandomString = (length) => {
@@ -31,18 +32,54 @@ const userInfo = {
   fetched: false
 };
 
-// Current playback state
 let currentPlayback = null;
-// Play history
 let playHistory = null;
 let lastHistoryFetch = 0;
 
-// Check if token is expired
+const loadTokensFromDatabase = async () => {
+  try {
+    const userTokens = await spotifyAuthRepository.getTokens(config.clientId);
+    console.log('Found user tokens for clientId', config.clientId, JSON.stringify(userTokens));
+
+    if (userTokens) {
+      tokenInfo.access_token = userTokens.accessToken;
+      tokenInfo.refresh_token = userTokens.refreshToken;
+      tokenInfo.expires_at = userTokens.expiresAt ? new Date(userTokens.expiresAt).getTime() : null;
+
+      console.log(`Loaded tokens for clientId ${userTokens.clientId} from database`);
+      return true;
+    } else {
+      console.log('No tokens found in database');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error loading tokens from database:', error.message);
+    return false;
+  }
+};
+
+const saveTokensToDatabase = async () => {
+  try {
+    // We can save tokens without a user ID since the primary key is client_id
+    await spotifyAuthRepository.saveTokens({
+      clientId: config.clientId,
+      accessToken: tokenInfo.access_token,
+      refreshToken: tokenInfo.refresh_token,
+      expiresAt: tokenInfo.expires_at ? new Date(tokenInfo.expires_at) : null
+    });
+
+    console.log(`Saved tokens for clientId ${config.clientId} to database`);
+    return true;
+  } catch (error) {
+    console.error('Error saving tokens to database:', error.message);
+    return false;
+  }
+};
+
 const isTokenExpired = () => {
   return !tokenInfo.expires_at || Date.now() > tokenInfo.expires_at;
 };
 
-// Refresh the access token when it expires
 const refreshAccessToken = async () => {
   if (!tokenInfo.refresh_token) {
     console.error('No refresh token available. Please authorize again.');
@@ -71,6 +108,22 @@ const refreshAccessToken = async () => {
       tokenInfo.refresh_token = data.refresh_token;
     }
 
+    try {
+      if (userInfo.id) {
+        await saveTokensToDatabase();
+      } else {
+        try {
+          await getCurrentUserProfile();
+        } catch (profileError) {
+          console.error('Could not fetch user profile to get user ID:', profileError.message);
+          // We'll continue even without saving to database
+        }
+      }
+    } catch (dbError) {
+      console.error('Failed to save tokens to database:', dbError.message);
+      // Continue even if database save fails - we still have valid tokens in memory
+    }
+
     return true;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -86,9 +139,7 @@ const refreshAccessToken = async () => {
   }
 };
 
-// Get current user profile information
 const getCurrentUserProfile = async () => {
-  // Skip if we already have the user info
   if (userInfo.fetched) {
     console.log('User profile already fetched, using cached data');
     return userInfo;
@@ -130,6 +181,9 @@ const getCurrentUserProfile = async () => {
     console.log(`- Explicit Content Filter Enabled: ${userInfo.explicit_content?.filter_enabled}`);
     console.log(`- Explicit Content Filter Locked: ${userInfo.explicit_content?.filter_locked}`);
 
+    // Save tokens to database now that we have a user ID
+    await saveTokensToDatabase();
+
     return userInfo;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -145,7 +199,6 @@ const getCurrentUserProfile = async () => {
   }
 };
 
-// Exchange authorization code for access token
 const exchangeCodeForToken = async (code) => {
   try {
     const response = await axios({
@@ -429,9 +482,49 @@ const monitorCurrentlyPlaying = async () => {
   }
 };
 
+// Initialize the Spotify service - load tokens and start monitoring if available
+const initialize = async () => {
+  console.log('Initializing Spotify service...');
+  const tokensLoaded = await loadTokensFromDatabase();
+
+  if (tokensLoaded) {
+    console.log('Found saved tokens, attempting to refresh if needed...');
+    if (isTokenExpired()) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        console.log('Successfully refreshed token from saved refresh token');
+        return true;
+      } else {
+        console.log('Failed to refresh token, user will need to re-authenticate');
+        return false;
+      }
+    } else {
+      console.log('Saved token is still valid');
+      return true;
+    }
+  } else {
+    console.log('No saved tokens found, user will need to authenticate');
+    return false;
+  }
+};
+
 // Start monitoring
-const startMonitoring = () => {
+const startMonitoring = async () => {
   console.log('Starting Spotify monitoring...');
+
+  // If tokens are already loaded, we can skip initialization
+  // This is needed because app.js might have already initialized the service
+  const tokensAvailable = tokenInfo.access_token && tokenInfo.refresh_token;
+
+  // Only run initialize if not already authenticated
+  if (!tokensAvailable) {
+    const initialized = await initialize();
+
+    if (!initialized) {
+      console.log('Not authenticated. Please visit http://localhost:' + config.port + '/login');
+      return;
+    }
+  }
 
   // Run immediately
   monitorCurrentlyPlaying().catch(error => {
@@ -480,5 +573,6 @@ module.exports = {
   getAuthorizationUrl,
   getCachedData,
   skipToNextTrack,
-  getCurrentUserProfile
+  getCurrentUserProfile,
+  initialize
 };

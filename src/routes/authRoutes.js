@@ -30,11 +30,10 @@ router.get('/callback', async (req, res) => {
     const success = await spotifyService.exchangeCodeForToken(code);
 
     if (success) {
-      // Redirect to the now playing page
-      res.redirect('/nowplaying');
-
       // Start monitoring after successful authentication
       spotifyService.startMonitoring();
+      // Redirect to the now playing page
+      res.redirect('/nowplaying');
     } else {
       res.send('Error during authentication');
     }
