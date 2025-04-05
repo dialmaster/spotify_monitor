@@ -26,6 +26,14 @@ const Player = (() => {
       }
 
       const data = await response.json();
+
+      // Check for authentication error
+      if (data.error === "Not authenticated") {
+        console.log("User not authenticated, redirecting to login page");
+        window.location.href = "/";
+        return;
+      }
+
       ui.updateUI(data);
 
       // Clear existing interval and start a new one

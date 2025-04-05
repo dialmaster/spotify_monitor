@@ -106,6 +106,16 @@ h3 {
   transform: scale(1.05);
 }
 
+.login-note {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #a3a3a3;
+  font-style: italic;
+  padding: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
 /* Now Playing Page */
 #now-playing-container {
   width: 100%;
