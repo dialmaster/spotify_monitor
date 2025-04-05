@@ -22,17 +22,15 @@ const Player = (() => {
       const response = await fetch('/api/currently-playing');
 
       if (!response.ok) {
+        if (response.status === 401) {
+            console.log("User not authenticated, redirecting to login page");
+            window.location.href = "/";
+            return;
+        }
         throw new Error(`Error fetching data: ${response.status}`);
       }
 
       const data = await response.json();
-
-      // Check for authentication error
-      if (data.error === "Not authenticated") {
-        console.log("User not authenticated, redirecting to login page");
-        window.location.href = "/";
-        return;
-      }
 
       ui.updateUI(data);
 
