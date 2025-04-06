@@ -6,6 +6,7 @@ const config = require('./config');
 const browserPool = require('./utils/browserPool');
 const dbService = require('./services/dbService');
 const spotifyService = require('./services/spotifyService');
+const monitoringDaemon = require('./services/monitoringDaemon');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -77,6 +78,8 @@ const server = app.listen(config.port, '0.0.0.0', async () => {
             if (spotifyInitialized) {
               console.log('Successfully initialized Spotify service with saved tokens');
               spotifyService.startMonitoring();
+              // Start the monitoring daemon here so it can start updating the cache
+              // monitoringDaemon.start();
             } else {
               console.log('No valid Spotify tokens found, please authenticate via the web interface');
             }

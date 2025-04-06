@@ -9,6 +9,7 @@ const config = require('../config');
 const trackRepository = require('../repositories/trackRepository');
 const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
 const rateLimit = require('express-rate-limit');
+const cacheService = require('../services/cacheService');
 
 // Configure rate limiting middleware
 // Note, it's not a super high rate limit, but enough to prevent DDOS attacks
@@ -26,8 +27,14 @@ const apiLimiter = rateLimit({
 // Apply rate limiting to all API routes
 router.use(apiLimiter);
 
+// This will be the only route the frontend will need to call in a loop
+router.get('/currently-playing-cache', async (req, res) => {
+    res.json(currentlyPlayingCacheService.getCurrentlyPlaying());
+});
+
 // API endpoint to get currently playing
 router.get('/currently-playing', async (req, res) => {
+  console.log('/currently-playing route called');
   try {
     // If we don't have a token, return error
     if (!spotifyService.getCachedData.isAuthenticated()) {
