@@ -19,7 +19,8 @@ async function saveTrack(trackData) {
       description: trackData.description,
       albumArt: trackData.albumArt,
       duration: trackData.duration,
-      imageUrl: trackData.imageUrl
+      imageUrl: trackData.imageUrl,
+      htmlDescription: trackData.htmlDescription
     });
 
     return {

@@ -246,6 +246,16 @@ h3 {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+#episode-description-container {
+  margin-top: var(--spacing-md);
+}
+
+#episode-description {
+  width: 100%;
+  padding: 8px;
+  margin: 0;
+}
+
 #history-list {
   margin-top: 1rem;
 }
@@ -272,6 +282,7 @@ h3 {
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
 }
 
 .history-item:hover {
@@ -714,6 +725,7 @@ h3 {
   .description {
     max-height: 120px;
     padding: 0.75rem;
+    font-size: var(--font-size-sm);
   }
 
   #lyrics-content {

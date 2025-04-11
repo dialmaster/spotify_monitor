@@ -43,6 +43,7 @@ const Elements = (() => {
     elements.episodeNameEl = document.getElementById('episode-name');
     elements.releaseDateEl = document.getElementById('release-date');
     elements.episodeDescriptionEl = document.getElementById('episode-description');
+    elements.podcastDescriptionEl = document.getElementById('podcast-description');
     elements.podcastProgressBarFillEl = document.getElementById('podcast-progress-bar-fill');
     elements.podcastCurrentTimeEl = document.getElementById('podcast-current-time');
     elements.podcastTotalTimeEl = document.getElementById('podcast-total-time');

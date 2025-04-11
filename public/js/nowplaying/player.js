@@ -4,68 +4,54 @@ const Player = (() => {
   let lyrics = null;
   let transcript = null;
   let updateInterval = null;
+  let ageEvaluation = null;
 
   const initialize = (elementRefs, uiModule) => {
     elements = elementRefs;
     ui = uiModule;
 
     return {
-      fetchCurrentlyPlaying,
+      fetchCurrentlyPlayingCached,
       setLyricsModule: (lyricsModule) => { lyrics = lyricsModule; },
-      setTranscriptModule: (transcriptModule) => { transcript = transcriptModule; }
+      setTranscriptModule: (transcriptModule) => { transcript = transcriptModule; },
+      setAgeEvaluationModule: (ageEvalModule) => { ageEvaluation = ageEvalModule; }
     };
   };
 
-  // Fetch currently playing data from the API
-  const fetchCurrentlyPlaying = async () => {
-    try {
-      const response = await fetch('/api/currently-playing');
+  const fetchCurrentlyPlayingCached = async () => {
+    // This includes track, lyrics, and age evaluation
+    const response = await fetch('/api/currently-playing-cache');
 
-      if (!response.ok) {
-        if (response.status === 401) {
-            console.log("User not authenticated, redirecting to login page");
-            window.location.href = "/";
-            return;
-        }
-        throw new Error(`Error fetching data: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      ui.updateUI(data);
-
-      // Clear existing interval and start a new one
-      if (updateInterval) {
-        clearInterval(updateInterval);
-      }
-
-      // Update progress every second
-      updateInterval = setInterval(() => {
-        const shouldRefresh = ui.updateProgress();
-        if (shouldRefresh) {
-          // Wait 1 second then fetch new data
-          setTimeout(() => {
-            fetchCurrentlyPlaying();
-          }, 1000);
-        }
-      }, 1000);
-
-      // If it's a track, fetch lyrics
-      if (data && data.playing && data.type === 'track' && lyrics) {
-        lyrics.fetchAndDisplayLyrics(data.item.name, data.item.artists[0].name);
-      }
-      // If it's a podcast, fetch transcript
-      else if (data && data.playing && data.type === 'episode' && transcript) {
-        // Check if we have a Spotify URL
-        if (data.item.external_urls && data.item.external_urls.spotify) {
-          transcript.fetchAndDisplayTranscript(data.item.name, data.item.external_urls.spotify);
-        }
-      }
-
-    } catch (error) {
-      console.error('Error fetching currently playing data:', error);
+    if (!response.ok) {
+      throw new Error(`Error fetching data: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+    if (data.status === 'UNAUTHORIZED') {
+        console.log("User not authenticated, redirecting to login page");
+        window.location.href = "/";
+        return;
+    }
+
+    // Update TRACK information
+    console.log('Player: fetchCurrentlyPlayingCached() and updating UI with track information');
+    ui.updateUITrackCached(data.track);
+
+    // Clear existing interval and start a new one
+    if (updateInterval) {
+      clearInterval(updateInterval);
+    }
+
+    // Update progress every second
+    updateInterval = setInterval(() => {
+      ui.updateProgress();
+    }, 1000);
+
+    lyrics.displayLyricsOrTranscriptCached(data);
+
+    ageEvaluation.displayAgeEvaluationCached(data);
+
+  }
 
   return {
     initialize

@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Connect related modules
   player.setLyricsModule(lyrics);
   player.setTranscriptModule(transcript);
+  player.setAgeEvaluationModule(ageEvaluation);
   lyrics.setAgeEvaluationModule(ageEvaluation);
   transcript.setAgeEvaluationModule(ageEvaluation);
   transcript.setLyricsModule(lyrics);
@@ -43,12 +44,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initial data fetches
-  player.fetchCurrentlyPlaying();
+  player.fetchCurrentlyPlayingCached();
   history.fetchRecentlyPlayed();
   userProfile.fetchUserProfile();
 
   // Set up refresh intervals
-  setInterval(player.fetchCurrentlyPlaying, 7000);
+  setInterval(player.fetchCurrentlyPlayingCached, 6000);
   const historyRefreshInterval = setInterval(history.fetchRecentlyPlayed, 240000);
 
   // Clear cache on page unload

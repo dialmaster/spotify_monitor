@@ -73,6 +73,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'URL to track image from Spotify',
       field: 'image_url'
+    },
+    htmlDescription: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'HTML description of the track',
+      field: 'html_description'
     }
   }, {
     sequelize,

@@ -51,6 +51,7 @@ const History = (() => {
         // Get the item details based on type
         const historyTrack = item.track;
         const isTrack = !!historyTrack;
+        const isEpisode = item.track.type === 'episode';
 
         // For episodes, the item itself is the content
         const content = isTrack ? historyTrack : item.episode;
