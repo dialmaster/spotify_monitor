@@ -56,6 +56,16 @@ const UI = (() => {
   };
 
   const updateHistory = (previouslyPlayingData, nowPlayingData) => {
+    // If nothing is playing, and nowthing was playing, then don't fetch history
+    if ((!nowPlayingData || !nowPlayingData.playing) && (!previouslyPlayingData || !previouslyPlayingData.playing)) {
+      return;
+    }
+
+    // If the same track is still playing, then don't fetch history
+    if (previouslyPlayingData && nowPlayingData && nowPlayingData.playing && previouslyPlayingData.spotifyUrl === nowPlayingData.spotifyUrl) {
+      return;
+    }
+
     if (previouslyPlayingData && nowPlayingData && nowPlayingData.playing && previouslyPlayingData.spotifyUrl !== nowPlayingData.spotifyUrl) {
         // If a track is still playing, then we should show a toast in history.js
         // This is to display the blocked content notification for the previous track
