@@ -78,6 +78,11 @@ class MonitoringDaemon {
 
         const currentAgeEvaluation = this.cacheService.getCurrentAgeEvaluation();
         if (!currentAgeEvaluation || (!currentAgeEvaluation.error || !currentAgeEvaluation.evaluation)) {
+            if (ageEvaluationService.isAgeEvaluationAvailable()) {
+                this.cacheService.setCurrentAgeEvaluation({
+                    currentlyFetching: true,
+                });
+            }
             const currentAgeEvaluation = await this.fetchAgeEvaluation();
             // TODO: Log the age evaluation?
             // logService.logAgeEvaluation(item, currentAgeEvaluation);
@@ -307,16 +312,21 @@ class MonitoringDaemon {
             return result;
         }
 
-        const evaluation = await ageEvaluationService.evaluateContentAge({
-            id,
-            type: contentType,
-            title,
-            spotifyUrl
-        });
-        console.log('Monitoring daemon: fetchAgeEvaluation(): Age evaluation: ' + JSON.stringify(evaluation));
-
-        result.evaluation = evaluation;
-        return result;
+        try {
+            const evaluation = await ageEvaluationService.evaluateContentAge({
+                id,
+                type: contentType,
+                title,
+                spotifyUrl
+            });
+            result.evaluation = evaluation;
+            console.log('Monitoring daemon: fetchAgeEvaluation(): Age evaluation: ' + JSON.stringify(evaluation));
+            return result;
+        } catch (error) {
+            console.error('Monitoring daemon: fetchAgeEvaluation(): Error evaluating age evaluation:', error.message);
+            result.error = 'Error evaluating age evaluation';
+            return result;
+        }
     }
 
     async checkAndSkipBlockedContent() {

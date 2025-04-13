@@ -74,32 +74,39 @@ const prepareContentForEvaluation = async (params) => {
         lyrics += truncationMessage;
     }
 
-    // Prepare content for evaluation
+    // Prepare content for evaluation using Markdown formatting
     let content = '';
     if (type === 'track') {
-        content = `Music Track: ${title}\n`;
+        content = `# Music Track Title: ${title}\n\n`;
+
         if (artist) {
-            content += `Artist: ${artist}\n`;
+            content += `## Artist\n\`\`\`\n${artist}\n\`\`\`\n\n`;
         }
+
         if (album) {
-            content += `Album: ${album}\n`;
+            content += `## Album\n\`\`\`\n${album}\n\`\`\`\n\n`;
         }
+
         if (lyrics) {
-            content += `\nLyrics:\n${lyrics}`;
+            content += `## Lyrics\n\`\`\`\n${lyrics}\n\`\`\`\n`;
         }
     } else if (type === 'episode') {
-        content = `Podcast Episode: ${title}\n`;
+        content = `# Podcast Episode Title: ${title}\n\n`;
+
         if (artist) {
-            content += `Artist: ${artist}\n`;
+            content += `## Creator\n\`\`\`\n${artist}\n\`\`\`\n\n`;
         }
+
         if (description) {
-            content += `\nDescription:\n${description}`;
+            content += `## Podcast Description or Tagline\n\`\`\`\n${description}\n\`\`\`\n\n`;
         }
+
         if (htmlDescription) {
-            content += `\nHTML Description:\n${htmlDescription}`;
+            content += `## Episode Description\n\`\`\`\n${htmlDescription}\n\`\`\`\n\n`;
         }
+
         if (lyrics) {
-            content += `\nTranscript:\n${lyrics}`;
+            content += `## Episode Transcript\n\`\`\`\n${lyrics}\n\`\`\`\n`;
         }
     }
 

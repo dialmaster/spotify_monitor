@@ -3,13 +3,13 @@ const UI = (() => {
   let currentData = null;
   let updateInterval = null;
   let trackedProgress = null;
-
+  let history = null;
   const initialize = (elementRefs) => {
     elements = elementRefs;
     return {
-      updateUI,
       updateUITrackCached,
       updateProgress,
+      setHistoryModule: (historyModule) => { history = historyModule; },
       getCurrentData: () => currentData,
       setCurrentData: (data) => { currentData = data; },
       setUpdateInterval: (interval) => { updateInterval = interval; },
@@ -55,7 +55,29 @@ const UI = (() => {
     return false;
   };
 
+  const updateHistory = (previouslyPlayingData, nowPlayingData) => {
+    if (previouslyPlayingData && nowPlayingData && nowPlayingData.playing && previouslyPlayingData.spotifyUrl !== nowPlayingData.spotifyUrl) {
+        // If a track is still playing, then we should show a toast in history.js
+        // This is to display the blocked content notification for the previous track
+        history.fetchRecentlyPlayed(true, true);
+    }
+
+    // If no track was playing, but now one is, then fetch history, but don't show a toast
+    // But set currentlyPlaying to true so we don't show THIS (the last) item in the history list
+    if (previouslyPlayingData === null && (nowPlayingData && nowPlayingData.playing)) {
+        history.fetchRecentlyPlayed(false, true);
+    }
+
+    // If no track IS playing, but one WAS, then fetch history, don't show a toast
+    // But set currentlyPlaying to false so we don't show the last item in the history list
+    if ((!nowPlayingData || !nowPlayingData.playing) && previouslyPlayingData !== null) {
+        history.fetchRecentlyPlayed(false, false);
+    }
+  }
+
   const updateUITrackCached = (data) => {
+    const previouslyPlayingData = currentData;
+
     // Hide all containers initially
     elements.loadingEl.classList.add('hidden');
     elements.notPlayingEl.classList.add('hidden');
@@ -83,6 +105,7 @@ const UI = (() => {
     // If nothing is playing
     if (!data || !data.playing) {
         elements.notPlayingEl.classList.remove('hidden');
+        updateHistory(previouslyPlayingData, data);
         return;
     }
     // If it's a track
@@ -160,97 +183,8 @@ const UI = (() => {
         elements.podcastContainerEl.classList.remove('hidden');
     }
 
+    updateHistory(previouslyPlayingData, data);
   }
-
-  // Update UI based on currently playing data
-  const updateUI = (data) => {
-    console.log('UI: updateUI() and updating UI with track information: ' + JSON.stringify(data));
-    // Hide all containers initially
-    elements.loadingEl.classList.add('hidden');
-    elements.notPlayingEl.classList.add('hidden');
-    elements.trackContainerEl.classList.add('hidden');
-    elements.podcastContainerEl.classList.add('hidden');
-    elements.lyricsContainerEl.classList.add('hidden');
-    elements.podcastTranscriptContainerEl.classList.add('hidden');
-
-    // Hide age containers
-    if (elements.trackAgeContainerEl) elements.trackAgeContainerEl.classList.add('hidden');
-    if (elements.podcastAgeContainerEl) elements.podcastAgeContainerEl.classList.add('hidden');
-
-    currentData = data;
-
-    // If nothing is playing
-    if (!data || !data.playing) {
-      elements.notPlayingEl.classList.remove('hidden');
-      return;
-    }
-
-    // If it's a track
-    if (data.type === 'track') {
-      // Update track info
-      elements.trackNameEl.textContent = data.item.name;
-      elements.artistNameEl.textContent = data.item.artists.map(artist => artist.name).join(', ');
-      elements.albumNameEl.textContent = data.item.album.name;
-
-      // Set album art
-      if (data.item.album.images && data.item.album.images.length > 0) {
-        elements.albumArtEl.src = data.item.album.images[0].url;
-      }
-
-      // Set Spotify Link if available
-      if (data.item.external_urls && data.item.external_urls.spotify) {
-        elements.spotifyTrackLinkEl.href = data.item.external_urls.spotify;
-        elements.spotifyTrackLinkEl.classList.remove('hidden');
-      } else {
-        elements.spotifyTrackLinkEl.classList.add('hidden');
-      }
-
-      // Update progress
-      const progressPercent = (data.progress / data.duration) * 100;
-      elements.progressBarFillEl.style.width = `${progressPercent}%`;
-      elements.currentTimeEl.textContent = Utils.formatTime(data.progress);
-      elements.totalTimeEl.textContent = Utils.formatTime(data.duration);
-
-      // Show track container
-      elements.trackContainerEl.classList.remove('hidden');
-    }
-    // If it's a podcast
-    else if (data.type === 'episode') {
-      // Update podcast info
-      elements.podcastNameEl.textContent = data.item.show?.name || 'Unknown Show';
-      elements.episodeNameEl.textContent = data.item.name;
-      elements.releaseDateEl.textContent = `Released: ${data.item.release_date || 'Unknown'}`;
-
-      // Set podcast description
-      if (data.item.description) {
-        elements.episodeDescriptionEl.textContent = data.item.description;
-      } else {
-        elements.episodeDescriptionEl.textContent = 'No description available';
-      }
-
-      // Set podcast art
-      if (data.item.images && data.item.images.length > 0) {
-        elements.podcastArtEl.src = data.item.images[0].url;
-      }
-
-      // Set Spotify Link if available
-      if (data.item.external_urls && data.item.external_urls.spotify) {
-        elements.spotifyPodcastLinkEl.href = data.item.external_urls.spotify;
-        elements.spotifyPodcastLinkEl.classList.remove('hidden');
-      } else {
-        elements.spotifyPodcastLinkEl.classList.add('hidden');
-      }
-
-      // Update progress
-      const progressPercent = (data.progress / data.duration) * 100;
-      elements.podcastProgressBarFillEl.style.width = `${progressPercent}%`;
-      elements.podcastCurrentTimeEl.textContent = Utils.formatTime(data.progress);
-      elements.podcastTotalTimeEl.textContent = Utils.formatTime(data.duration);
-
-      // Show podcast container
-      elements.podcastContainerEl.classList.remove('hidden');
-    }
-  };
 
   return {
     initialize

@@ -172,7 +172,7 @@ const sendBlockNotification = async (item, evaluation, autoSkipped) => {
 
     if (item.contentType === 'track') {
       // Format for track
-      message += `Track: "${item.name}". `;
+      message += `Track: "${item.title}". `;
       message += `Artist: ${item.artist}. `;
 
       if (item.album) {

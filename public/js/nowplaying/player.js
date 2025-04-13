@@ -34,7 +34,6 @@ const Player = (() => {
     }
 
     // Update TRACK information
-    console.log('Player: fetchCurrentlyPlayingCached() and updating UI with track information');
     ui.updateUITrackCached(data.track);
 
     // Clear existing interval and start a new one

@@ -17,9 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const player = Player.initialize(elements, ui);
 
   // Connect related modules
+  history.setToastModule(toast);
   player.setLyricsModule(lyrics);
   player.setTranscriptModule(transcript);
   player.setAgeEvaluationModule(ageEvaluation);
+  ui.setHistoryModule(history);
   lyrics.setAgeEvaluationModule(ageEvaluation);
   transcript.setAgeEvaluationModule(ageEvaluation);
   transcript.setLyricsModule(lyrics);
