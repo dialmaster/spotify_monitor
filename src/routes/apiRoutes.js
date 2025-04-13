@@ -19,8 +19,13 @@ const apiLimiter = rateLimit({
   }
 });
 
-// Apply rate limiting to all API routes except SSE endpoint
-router.use(/^(?!\/stream-events).+/, apiLimiter);
+// Simple health check endpoint - no rate limiting needed
+router.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK' });
+});
+
+// Apply rate limiting to all API routes except SSE endpoint and health endpoint
+router.use(/^(?!\/stream-events|\/health).+/, apiLimiter);
 
 // Get data about the currently playing track
 router.get('/currently-playing', async (req, res) => {

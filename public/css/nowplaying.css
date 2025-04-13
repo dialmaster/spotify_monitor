@@ -386,6 +386,37 @@ header {
   padding-left: var(--spacing-sm);
 }
 
+/* Connection status styles */
+#connection-status-container {
+  background-color: #222;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.3rem;
+  margin: 0 auto 1rem;
+  display: flex;
+  justify-content: center;
+  width: fit-content;
+}
+
+.connection-status {
+  text-align: center;
+}
+
+#connection-status-text {
+  font-weight: bold;
+}
+
+.connection-status-connected {
+  color: #1DB954;
+}
+
+.connection-status-disconnected {
+  color: #f44336;
+}
+
+.connection-status-connecting {
+  color: #ff9800;
+}
+
 /* Consistent spacing for all hidden sections */
 .hidden {
   display: none !important;

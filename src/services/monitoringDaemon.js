@@ -20,7 +20,7 @@ class MonitoringDaemon {
     constructor() {
         this.isRunning = false;
         this.isFetchingCurrentlyPlaying = false;
-        this.monitorInterval = 5000;
+        this.monitorInterval = 2000; // 15 checks per 30 seconds should be fine
         this.cacheService = cacheService;
         this.intervalId = null;
     }
@@ -78,9 +78,13 @@ class MonitoringDaemon {
         const previousStateTrack = this.cacheService.getCurrentTrack();
 
         const currentlyPlayingTrack = await this.fetchTrack();
+        // If there is no currently playing track and there was a previous track, it means the user stopped playing music
+        // So we need to cleanup the tracking and clear the cache, this will notify the frontend
         if (!currentlyPlayingTrack) {
-            logService.cleanupTracking(null);
-            cacheService.clearAll();
+            if (previousStateTrack && previousStateTrack.playing) {
+                logService.cleanupTracking(null);
+                cacheService.clearAll();
+            }
             this.isFetchingCurrentlyPlaying = false;
             return;
         }

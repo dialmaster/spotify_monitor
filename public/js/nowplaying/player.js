@@ -7,6 +7,10 @@ const Player = (() => {
   let ageEvaluation = null;
   let eventSource = null;
   let clientId = null;
+  let connectionStatus = 'connected'; // 'connected', 'disconnected', 'connecting'
+  let reconnectTimeout = null;
+  let disconnectedStartTime = null;
+  let disconnectionTimer = null;
 
   const initialize = (elementRefs, uiModule) => {
     elements = elementRefs;
@@ -15,7 +19,7 @@ const Player = (() => {
     // Generate a client ID for SSE connections
     clientId = generateUUID();
 
-    // Connect to SSE endpoint
+    // Connect to event stream
     connectToEventStream();
 
     return {
@@ -23,7 +27,8 @@ const Player = (() => {
       setLyricsModule: (lyricsModule) => { lyrics = lyricsModule; },
       setTranscriptModule: (transcriptModule) => { transcript = transcriptModule; },
       setAgeEvaluationModule: (ageEvalModule) => { ageEvaluation = ageEvalModule; },
-      closeConnection
+      closeConnection,
+      getConnectionStatus: () => connectionStatus
     };
   };
 
@@ -41,6 +46,89 @@ const Player = (() => {
     });
   };
 
+  // Format the disconnection time
+  const formatDisconnectionTime = () => {
+    if (!disconnectedStartTime) return '';
+
+    const now = new Date();
+    const diffMs = now - disconnectedStartTime;
+    const seconds = Math.floor((diffMs / 1000) % 60);
+    const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
+    const hours = Math.floor((diffMs / (1000 * 60 * 60)));
+
+    if (hours > 0) {
+      return `Disconnected for ${hours}h${minutes}m${seconds}s`;
+    } else if (minutes > 0) {
+      return `Disconnected for ${minutes}m${seconds}s`;
+    } else {
+      return `Disconnected for ${seconds}s`;
+    }
+  };
+
+  // Update the disconnection timer in the UI
+  const updateDisconnectionTimer = () => {
+    if (elements.connectionStatusTextEl && connectionStatus === 'disconnected') {
+      elements.connectionStatusTextEl.textContent = formatDisconnectionTime();
+    }
+  };
+
+  const updateConnectionStatus = (status) => {
+    // If status hasn't changed, don't do anything (except for disconnection timer updates)
+    if (connectionStatus === status) {
+      if (status === 'disconnected') {
+        updateDisconnectionTimer();
+      }
+      return;
+    }
+
+    connectionStatus = status;
+
+    // Update UI via elements
+    if (elements.connectionStatusContainerEl) {
+      if (status === 'connected') {
+        // Hide the indicator when connected
+        elements.connectionStatusContainerEl.classList.add('hidden');
+
+        // Clear disconnection timer if it exists
+        if (disconnectionTimer) {
+          clearInterval(disconnectionTimer);
+          disconnectionTimer = null;
+        }
+
+        // Reset disconnected start time
+        disconnectedStartTime = null;
+      } else {
+        // Show the indicator when disconnected or connecting
+        elements.connectionStatusContainerEl.classList.remove('hidden');
+
+        if (elements.connectionStatusTextEl) {
+          if (status === 'connecting') {
+            elements.connectionStatusTextEl.textContent = 'Connecting...';
+            elements.connectionStatusTextEl.className = ''; // Reset classes
+            elements.connectionStatusTextEl.classList.add('connection-status-connecting');
+          } else if (status === 'disconnected') {
+            // If we just became disconnected, start tracking the time
+            if (!disconnectedStartTime) {
+              disconnectedStartTime = new Date();
+
+              // Start the disconnection timer
+              if (disconnectionTimer) {
+                clearInterval(disconnectionTimer);
+              }
+              disconnectionTimer = setInterval(updateDisconnectionTimer, 1000);
+
+              // Initial update
+              updateDisconnectionTimer();
+            }
+
+            elements.connectionStatusTextEl.className = ''; // Reset classes
+            elements.connectionStatusTextEl.classList.add('connection-status-disconnected');
+          }
+        }
+      }
+    }
+  };
+
   // Connect to the SSE endpoint
   const connectToEventStream = () => {
     // Close any existing connection
@@ -48,17 +136,27 @@ const Player = (() => {
       eventSource.close();
     }
 
+    // Clear any pending reconnect timeout
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    }
+
+    updateConnectionStatus('connecting');
+
     // Create a new connection
     eventSource = new EventSource(`/api/stream-events?clientId=${clientId}`);
 
     // Handle connection open
     eventSource.onopen = () => {
       console.log('SSE connection established');
+      updateConnectionStatus('connected');
     };
 
     // Handle incoming messages
     eventSource.onmessage = (event) => {
       try {
+        updateConnectionStatus('connected');
         const data = JSON.parse(event.data);
 
         // Process the data update
@@ -87,12 +185,13 @@ const Player = (() => {
     // Handle connection error
     eventSource.onerror = (error) => {
       console.error('SSE connection error:', error);
+      updateConnectionStatus('disconnected');
 
-      // Try to reconnect after a delay
-      setTimeout(() => {
+      // Try to reconnect after 10 seconds
+      reconnectTimeout = setTimeout(() => {
         console.log('Attempting to reconnect SSE...');
         connectToEventStream();
-      }, 5000);
+      }, 10000);
     };
   };
 
@@ -137,6 +236,20 @@ const Player = (() => {
       eventSource.close();
       eventSource = null;
     }
+
+    // Clear any pending reconnect timeout
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    }
+
+    // Clear disconnection timer if it exists
+    if (disconnectionTimer) {
+      clearInterval(disconnectionTimer);
+      disconnectionTimer = null;
+    }
+
+    updateConnectionStatus('disconnected');
   };
 
   return {

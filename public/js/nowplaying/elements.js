@@ -19,6 +19,10 @@ const Elements = (() => {
     elements.userDisplayNameEl = document.getElementById('user-display-name');
     elements.userEmailEl = document.getElementById('user-email');
 
+    // Connection status elements
+    elements.connectionStatusContainerEl = document.getElementById('connection-status-container');
+    elements.connectionStatusTextEl = document.getElementById('connection-status-text');
+
     // Track Elements
     elements.albumArtEl = document.getElementById('album-art');
     elements.trackNameEl = document.getElementById('track-name');
