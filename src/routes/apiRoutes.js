@@ -4,6 +4,7 @@ const spotifyService = require('../services/spotifyService');
 const recentlyPlayedService = require('../services/recentlyPlayed');
 const rateLimit = require('express-rate-limit');
 const cacheService = require('../services/cacheService');
+const sseService = require('../services/sseService');
 
 // Configure rate limiting middleware
 // Note, it's not a super high rate limit, but enough to prevent DDOS attacks
@@ -18,12 +19,31 @@ const apiLimiter = rateLimit({
   }
 });
 
-// Apply rate limiting to all API routes
-router.use(apiLimiter);
+// Apply rate limiting to all API routes except SSE endpoint
+router.use(/^(?!\/stream-events).+/, apiLimiter);
 
 // Get data about the currently playing track
 router.get('/currently-playing', async (req, res) => {
     res.json(cacheService.getCurrentlyPlaying());
+});
+
+// Server-Sent Events (SSE) endpoint for real-time updates
+router.get('/stream-events', async (req, res) => {
+  const clientId = req.query.clientId;
+
+  if (!clientId) {
+    return res.status(400).json({
+      error: 'Missing clientId parameter',
+      status: 400
+    });
+  }
+
+  // Set up SSE connection
+  sseService.addClient(clientId, res);
+
+  // Send initial data to the client
+  const currentData = cacheService.getCurrentlyPlaying();
+  res.write(`data: ${JSON.stringify(currentData)}\n\n`);
 });
 
 // Get user profile information

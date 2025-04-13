@@ -50,15 +50,16 @@ document.addEventListener('DOMContentLoaded', () => {
   history.fetchRecentlyPlayed();
   userProfile.fetchUserProfile();
 
-  // Set up refresh intervals
-  setInterval(player.fetchCurrentlyPlaying, 6000);
-  const historyRefreshInterval = setInterval(history.fetchRecentlyPlayed, 240000);
-
   // Clear cache on page unload
   window.addEventListener('beforeunload', () => {
-    clearInterval(historyRefreshInterval);
     lyrics.clearCache();
     ageEvaluation.clearCache();
+
+    // Close SSE connection
+    if (player && typeof player.closeConnection === 'function') {
+      player.closeConnection();
+    }
+
     console.log('Caches cleared and intervals cleared');
   });
 });

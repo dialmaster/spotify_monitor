@@ -1,6 +1,8 @@
 /**
  * Singleton class to cache/store the currently playing track information
  */
+const sseService = require('./sseService');
+const ageEvaluationService = require('./ageEvaluationService');
 
 // Possible statuses:
 // WAITING: Waiting to fetch data or be authorized (frontend can just display loading spinner)
@@ -14,7 +16,7 @@ class CacheService {
         this.currentTrack = {
             playing: false,
         };
-        this.timeLastUpdated = null;
+        this.timeLastUpdated = Date.now();
         this.currentLyrics = null;
         this.currentAgeEvaluation = null;
     }
@@ -25,6 +27,20 @@ class CacheService {
 
     setStatus(status) {
         this.status = status;
+    }
+
+    getTimeLastUpdated() {
+        return this.timeLastUpdated;
+    }
+
+    setAgeEvaluationLoading() {
+        if (ageEvaluationService.isAgeEvaluationAvailable()) {
+            this.currentAgeEvaluation = {
+                currentlyFetching: true,
+            };
+        } else {
+            this.currentAgeEvaluation = null;
+        }
     }
 
     setCurrentTrack(track) {
@@ -41,14 +57,20 @@ class CacheService {
                 console.log('Calculated is more than 2 seconds different than track.progress, updating progress');
                 this.currentTrack.progress = track.progress;
                 this.timeLastUpdated = timeLastUpdated;
+
+                // Broadcast update to clients
+                this._broadcastUpdate();
             }
             return;
         }
 
-        console.log('Track is different, updating track');
-        track.timeLastUpdated = timeLastUpdated;
-
         this.currentTrack = track;
+        this.setAgeEvaluationLoading(); // If we're setting a new track, we need to set the age evaluation to loading
+        this.currentLyrics = null; // If we're setting a new track, we need to clear the lyrics
+        this.timeLastUpdated = timeLastUpdated;
+
+        // Broadcast update to clients
+        this._broadcastUpdate();
     }
 
     getCurrentTrack() {
@@ -93,6 +115,9 @@ class CacheService {
         if (JSON.stringify(this.currentLyrics) !== JSON.stringify(lyrics)) {
             this.currentLyrics = lyrics;
             this.timeLastUpdated = Date.now();
+
+            // Broadcast update to clients
+            this._broadcastUpdate();
         }
     }
 
@@ -105,6 +130,9 @@ class CacheService {
         if (JSON.stringify(this.currentAgeEvaluation) !== JSON.stringify(ageEvaluation)) {
             this.currentAgeEvaluation = ageEvaluation;
             this.timeLastUpdated = Date.now();
+
+            // Broadcast update to clients
+            this._broadcastUpdate();
         }
     }
 
@@ -116,9 +144,27 @@ class CacheService {
         this.currentTrack = {
             playing: false,
         }
-        this.timeLastUpdated = null;
+        this.timeLastUpdated = Date.now();
         this.currentLyrics = null;
         this.currentAgeEvaluation = null;
+
+        // Broadcast update to clients
+        this._broadcastUpdate();
+    }
+
+    /**
+     * Private method to broadcast updates to all SSE clients
+     * @private
+     */
+    _broadcastUpdate() {
+        if (this.timeLastUpdated) {
+            const clientCount = sseService.getClientCount();
+            if (clientCount > 0) {
+                const data = this.getCurrentlyPlaying();
+                const updatedCount = sseService.broadcast(data, this.timeLastUpdated);
+                console.log(`Broadcasting update to ${updatedCount}/${clientCount} connected clients (timeLastUpdated: ${this.timeLastUpdated}) with data: ${JSON.stringify(data)}`);
+            }
+        }
     }
 }
 

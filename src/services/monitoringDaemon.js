@@ -14,6 +14,7 @@ const ageEvaluationService = require('./ageEvaluationService');
 const cacheService = require('./cacheService');
 const statusTypes = require('../types/statusTypes');
 const trackRepository = require('../repositories/trackRepository');
+const sseService = require('./sseService');
 
 class MonitoringDaemon {
     constructor() {
@@ -63,7 +64,6 @@ class MonitoringDaemon {
         // If we have a new track, update the cache AND set the start time to now.
         // Or if there was nothing playing before, and now there is...
         if ((previousStateTrack && previousStateTrack.id !== currentlyPlayingTrack.id) || !previousStateTrack) {
-            cacheService.clearAll();
             const spotifyUserProfile = await spotifyService.getCurrentUserProfile();
             currentlyPlayingTrack.rawItem.spotifyUserId = spotifyUserProfile.id;
             logService.logPlaybackStarted(currentlyPlayingTrack.rawItem, currentlyPlayingTrack.contentType);
@@ -89,10 +89,10 @@ class MonitoringDaemon {
                     currentlyFetching: true,
                 });
             }
-            const currentAgeEvaluation = await this.fetchAgeEvaluation();
+            const ageEvaluationResult = await this.fetchAgeEvaluation();
             // TODO: Log the age evaluation?
-            // logService.logAgeEvaluation(item, currentAgeEvaluation);
-            this.cacheService.setCurrentAgeEvaluation(currentAgeEvaluation);
+            // logService.logAgeEvaluation(item, ageEvaluationResult);
+            this.cacheService.setCurrentAgeEvaluation(ageEvaluationResult);
         }
 
         if (this.cacheService.getCurrentAgeEvaluation()) {
