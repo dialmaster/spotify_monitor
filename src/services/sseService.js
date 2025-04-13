@@ -6,6 +6,9 @@
 class SSEService {
     constructor() {
         this.clients = new Map(); // Map of client ID to client information
+        this.cleanupInterval = null;
+        this.inactivityTimeoutMs = 120000; // 2 minutes timeout for inactive connections
+        this.startCleanupInterval();
     }
 
     /**
@@ -25,10 +28,11 @@ class SSEService {
         // Send initial connection established message
         res.write(`data: ${JSON.stringify({ event: 'connected', clientId })}\n\n`);
 
-        // Store client with initial last update time
+        // Store client with initial last update time and activity time
         this.clients.set(clientId, {
             response: res,
-            lastTimeUpdated: null
+            lastTimeUpdated: null,
+            lastActivityTime: Date.now()
         });
 
         console.log(`SSE: Client ${clientId} connected. Total clients: ${this.clients.size}`);
@@ -68,6 +72,7 @@ class SSEService {
             try {
                 client.response.write(`data: ${JSON.stringify(data)}\n\n`);
                 client.lastTimeUpdated = timeLastUpdated;
+                client.lastActivityTime = Date.now(); // Update activity time
                 return true;
             } catch (error) {
                 console.error(`SSE: Error sending to client ${clientId}`, error);
@@ -107,6 +112,65 @@ class SSEService {
      */
     getClientCount() {
         return this.clients.size;
+    }
+
+    /**
+     * Start periodic cleanup of inactive connections
+     * @returns {void}
+     */
+    startCleanupInterval() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+        }
+
+        this.cleanupInterval = setInterval(() => {
+            this.cleanupInactiveConnections();
+        }, 30000); // Check every 30 seconds
+    }
+
+    /**
+     * Clean up connections that have been inactive for too long
+     * @returns {number} - Number of clients removed
+     */
+    cleanupInactiveConnections() {
+        const now = Date.now();
+        let removedCount = 0;
+
+        this.clients.forEach((client, clientId) => {
+            const inactiveDuration = now - client.lastActivityTime;
+
+            if (inactiveDuration > this.inactivityTimeoutMs) {
+                try {
+                    // Send a ping to verify connection is still alive
+                    client.response.write(`:ping\n\n`);
+
+                    // If write fails, removeClient will be called in the catch block
+                    // If write succeeds, update lastActivityTime
+                    client.lastActivityTime = now;
+                } catch (error) {
+                    console.log(`SSE: Removing inactive client ${clientId} (${inactiveDuration}ms inactive)`);
+                    this.removeClient(clientId);
+                    removedCount++;
+                }
+            }
+        });
+
+        if (removedCount > 0) {
+            console.log(`SSE: Cleaned up ${removedCount} inactive connections`);
+        }
+
+        return removedCount;
+    }
+
+    /**
+     * Stop the cleanup interval when service is shutting down
+     * @returns {void}
+     */
+    shutdown() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
     }
 }
 

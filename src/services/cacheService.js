@@ -49,7 +49,6 @@ class CacheService {
         const timeLastUpdated = Date.now();
 
         if (this.currentTrack?.id === track.id) {
-            console.log('Track is unchanged');
             // Update progress IF it has been manually changed
             const calculatedProgress = this.currentTrack.progress + (timeLastUpdated - this.timeLastUpdated);
             // If calculatedProgress is more than 2 seconds different than track.progress, update the progress

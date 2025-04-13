@@ -22,6 +22,7 @@ class MonitoringDaemon {
         this.isFetchingCurrentlyPlaying = false;
         this.monitorInterval = 5000;
         this.cacheService = cacheService;
+        this.intervalId = null;
     }
 
     async start() {
@@ -41,7 +42,30 @@ class MonitoringDaemon {
         this.cacheService.setStatus(statusTypes.AUTHORIZED);
         this.isRunning = true;
         this.fetchCurrentlyPlaying();
-        this.monitorInterval = setInterval(this.fetchCurrentlyPlaying.bind(this), this.monitorInterval);
+        this.intervalId = setInterval(this.fetchCurrentlyPlaying.bind(this), this.monitorInterval);
+    }
+
+    async stop() {
+        console.log('Stopping monitoring daemon');
+        if (!this.isRunning) {
+            console.log('Monitoring daemon not running');
+            return;
+        }
+
+        // Clear the interval
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+
+        // Shut down SSE service
+        if (sseService && typeof sseService.shutdown === 'function') {
+            sseService.shutdown();
+        }
+
+        this.isRunning = false;
+        this.cacheService.setStatus(statusTypes.STOPPED);
+        console.log('Monitoring daemon stopped');
     }
 
     async fetchCurrentlyPlaying() {
@@ -343,9 +367,6 @@ class MonitoringDaemon {
             console.log('Monitoring daemon: checkAndSkipBlockedContent(): No current track or age evaluation, skipping block checking');
             return;
         }
-
-        console.log('Monitoring daemon: checkAndSkipBlockedContent(): Checking and skipping blocked content for age evaluation: ' + JSON.stringify(ageEvaluation));
-
 
         if (ageEvaluation.evaluation.level === 'BLOCK') {
             console.log('Monitoring daemon: checkAndSkipBlockedContent(): Blocked content, skipping to next track');

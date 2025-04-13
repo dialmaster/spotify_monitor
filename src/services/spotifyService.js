@@ -139,7 +139,6 @@ const refreshAccessToken = async () => {
 
 const getCurrentUserProfile = async () => {
   if (userInfo.fetched) {
-    console.log('User profile already fetched, using cached data');
     return userInfo;
   }
 
@@ -312,8 +311,6 @@ const getCurrentlyPlaying = async () => {
         const result = await trackRepository.saveTrack(trackData);
         if (result.created) {
           console.log(`New ${playbackData.type} saved to database with ID: ${trackData.trackId}`);
-        } else {
-          console.log(`${playbackData.type} already exists in database with ID: ${trackData.trackId}`);
         }
       } catch (dbError) {
         console.error('Error saving track to database:', dbError.message);
