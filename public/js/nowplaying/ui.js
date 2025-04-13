@@ -7,7 +7,7 @@ const UI = (() => {
   const initialize = (elementRefs) => {
     elements = elementRefs;
     return {
-      updateUITrackCached,
+      updateUITrack,
       updateProgress,
       setHistoryModule: (historyModule) => { history = historyModule; },
       getCurrentData: () => currentData,
@@ -85,7 +85,7 @@ const UI = (() => {
     }
   }
 
-  const updateUITrackCached = (data) => {
+  const updateUITrack = (data) => {
     const previouslyPlayingData = currentData;
 
     // Hide all containers initially

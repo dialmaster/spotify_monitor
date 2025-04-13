@@ -10,7 +10,7 @@ const Lyrics = (() => {
     ui = uiModule;
 
     return {
-      displayLyricsOrTranscriptCached,
+      displayLyricsOrTranscript,
       clearCache: () => lyricsCache.clear(),
       setAgeEvaluationModule: (ageEvalModule) => { ageEvaluation = ageEvalModule; },
       // Add cache access methods
@@ -34,7 +34,7 @@ const Lyrics = (() => {
     };
   };
 
-  const displayLyricsOrTranscriptCached = (data) => {
+  const displayLyricsOrTranscript = (data) => {
     const isTrack = data.track.contentType === 'track';
     const contentType = isTrack ? 'track' : 'episode';
 

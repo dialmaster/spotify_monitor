@@ -10,13 +10,13 @@ const AgeEvaluation = (() => {
     ui = uiModule;
 
     return {
-      displayAgeEvaluationCached,
+      displayAgeEvaluation,
       clearCache: () => ageEvalCache.clear(),
       setToastModule: (toastModule) => { toast = toastModule; }
     };
   };
 
-  const displayAgeEvaluationCached = (data) => {
+  const displayAgeEvaluation = (data) => {
     const type = data.track.contentType;
 
     // Select the appropriate age evaluation elements based on content type
@@ -30,9 +30,10 @@ const AgeEvaluation = (() => {
     // Skip if elements don't exist
     if (!ageContainerEl) return;
 
-    // If no age evaluation data, just return
-    if (!data.ageEvaluation || !data.ageEvaluation.evaluation || !data.ageEvaluation.evaluation.ageRating) {
-      console.log('AgeEvaluation: displayAgeEvaluationCached() and no age evaluation data found, nothing to do');
+    // If no age evaluation data, just return and hide the age evaluation container
+    if (!data.ageEvaluation) {
+      console.log('AgeEvaluation: displayAgeEvaluation() and no age evaluation data found, nothing to do');
+      ageContainerEl.classList.add('hidden');
       return;
     }
 
@@ -58,7 +59,12 @@ const AgeEvaluation = (() => {
         return;
     }
 
-
+    // This should not happen, but if there is no error or currently fetching,
+    // but we have no evaluation data, then hide the age evaluation container
+    if (!data.ageEvaluation.evaluation) {
+      ageContainerEl.classList.add('hidden');
+      return;
+    }
 
     // Else display the age evaluation from the data
     ageContainerEl.classList.remove('hidden');

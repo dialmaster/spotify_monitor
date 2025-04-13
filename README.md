@@ -60,7 +60,7 @@ The app has different levels of functionality depending on which API keys you co
 **Note**: *This application has only been tested in WSL2 on Windows, but should work fine in Linux as well*
 
 - Node.js 14 or higher
-- Docker and Docker Compose (for running with the provided run.sh and stop.sh scripts)
+- Docker and Docker Compose (for running with the provided start.sh and stop.sh scripts)
 - npm or yarn
 
 ## Setup Instructions
@@ -152,17 +152,17 @@ The app has different levels of functionality depending on which API keys you co
    - Without these cookies, direct lyrics retrieval from Spotify won't work
 
 7. **Running With Docker**:
-   - The application includes a `run.sh` script that makes it easy to run multiple instances with Docker.
+   - The application includes a `start.sh` script that makes it easy to run multiple instances with Docker.
 
      - **Make the script executable**:
        ```bash
-       chmod +x run.sh
+       chmod +x start.sh
        chmod +x stop.sh
        ```
 
      - **Run an instance using a config file**:
        ```bash
-       ./run.sh config.json
+       ./start.sh config.json
        ```
        The script will automatically use the port specified in your config file
 
@@ -172,8 +172,8 @@ The app has different levels of functionality depending on which API keys you co
 
        *Each config file MUST specify a different port value!*
        ```bash
-       ./run.sh config.firstconfig.json
-       ./run.sh config.secondconfig.json
+       ./start.sh config.firstconfig.json
+       ./start.sh config.secondconfig.json
        ```
        Each instance will run in a separate container with its own port
 

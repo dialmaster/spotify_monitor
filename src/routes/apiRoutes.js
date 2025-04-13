@@ -21,13 +21,12 @@ const apiLimiter = rateLimit({
 // Apply rate limiting to all API routes
 router.use(apiLimiter);
 
-// This will be the only route the frontend will need to call in a loop
-router.get('/currently-playing-cache', async (req, res) => {
-    console.log('currently-playing-cache route called');
+// Get data about the currently playing track
+router.get('/currently-playing', async (req, res) => {
     res.json(cacheService.getCurrentlyPlaying());
 });
 
-// API endpoint to get user profile
+// Get user profile information
 router.get('/user-profile', async (req, res) => {
   try {
     // If we don't have a token, return error
@@ -59,7 +58,7 @@ router.get('/user-profile', async (req, res) => {
   }
 });
 
-// API endpoint to get recently played
+// Get recently played track history information
 router.get('/recently-played', async (req, res) => {
   try {
     // If we don't have a token, return error

@@ -53,7 +53,6 @@ class MonitoringDaemon {
         const previousStateTrack = this.cacheService.getCurrentTrack();
 
         const currentlyPlayingTrack = await this.fetchTrack();
-        //console.log('Monitoring daemon: fetchCurrentlyPlaying(): Currently playing set to ' + JSON.stringify(currentlyPlayingTrack));
         if (!currentlyPlayingTrack) {
             logService.cleanupTracking(null);
             cacheService.clearAll();
@@ -77,7 +76,7 @@ class MonitoringDaemon {
         }
 
         const currentAgeEvaluation = this.cacheService.getCurrentAgeEvaluation();
-        if (!currentAgeEvaluation || (!currentAgeEvaluation.error || !currentAgeEvaluation.evaluation)) {
+        if (!currentAgeEvaluation || (!currentAgeEvaluation.error && !currentAgeEvaluation.evaluation)) {
             if (ageEvaluationService.isAgeEvaluationAvailable()) {
                 this.cacheService.setCurrentAgeEvaluation({
                     currentlyFetching: true,

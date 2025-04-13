@@ -46,18 +46,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initial data fetches
-  player.fetchCurrentlyPlayingCached();
+  player.fetchCurrentlyPlaying();
   history.fetchRecentlyPlayed();
   userProfile.fetchUserProfile();
 
   // Set up refresh intervals
-  setInterval(player.fetchCurrentlyPlayingCached, 6000);
+  setInterval(player.fetchCurrentlyPlaying, 6000);
   const historyRefreshInterval = setInterval(history.fetchRecentlyPlayed, 240000);
 
   // Clear cache on page unload
   window.addEventListener('beforeunload', () => {
+    clearInterval(historyRefreshInterval);
     lyrics.clearCache();
     ageEvaluation.clearCache();
-    console.log('Caches cleared');
+    console.log('Caches cleared and intervals cleared');
   });
 });

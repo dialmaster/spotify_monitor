@@ -11,16 +11,16 @@ const Player = (() => {
     ui = uiModule;
 
     return {
-      fetchCurrentlyPlayingCached,
+      fetchCurrentlyPlaying,
       setLyricsModule: (lyricsModule) => { lyrics = lyricsModule; },
       setTranscriptModule: (transcriptModule) => { transcript = transcriptModule; },
       setAgeEvaluationModule: (ageEvalModule) => { ageEvaluation = ageEvalModule; }
     };
   };
 
-  const fetchCurrentlyPlayingCached = async () => {
+  const fetchCurrentlyPlaying = async () => {
     // This includes track, lyrics, and age evaluation
-    const response = await fetch('/api/currently-playing-cache');
+    const response = await fetch('/api/currently-playing');
 
     if (!response.ok) {
       throw new Error(`Error fetching data: ${response.status}`);
@@ -34,7 +34,7 @@ const Player = (() => {
     }
 
     // Update TRACK information
-    ui.updateUITrackCached(data.track);
+    ui.updateUITrack(data.track);
 
     // Clear existing interval and start a new one
     if (updateInterval) {
@@ -46,9 +46,9 @@ const Player = (() => {
       ui.updateProgress();
     }, 1000);
 
-    lyrics.displayLyricsOrTranscriptCached(data);
+    lyrics.displayLyricsOrTranscript(data);
 
-    ageEvaluation.displayAgeEvaluationCached(data);
+    ageEvaluation.displayAgeEvaluation(data);
 
   }
 
