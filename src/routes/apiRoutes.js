@@ -27,30 +27,6 @@ router.get('/currently-playing-cache', async (req, res) => {
     res.json(cacheService.getCurrentlyPlaying());
 });
 
-// API endpoint to get currently playing
-router.get('/currently-playing', async (req, res) => {
-  console.log('/currently-playing route called');
-  try {
-    // If we don't have a token, return error
-    if (!spotifyService.getCachedData.isAuthenticated()) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    // Use the existing currentPlayback data if it exists and is recent
-    // Otherwise, fetch fresh data
-    let currentPlayback = spotifyService.getCachedData.currentPlayback();
-    if (!currentPlayback || Date.now() - (currentPlayback.timestamp || 0) > 5000) {
-      await spotifyService.getCurrentlyPlaying();
-      currentPlayback = spotifyService.getCachedData.currentPlayback();
-    }
-
-    res.json(currentPlayback || { playing: false });
-  } catch (error) {
-    console.error('API error:', error.message);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // API endpoint to get user profile
 router.get('/user-profile', async (req, res) => {
   try {
