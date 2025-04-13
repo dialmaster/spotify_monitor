@@ -14,6 +14,7 @@ class CacheService {
         this.currentTrack = {
             playing: false,
         };
+        this.timeLastUpdated = null;
         this.currentLyrics = null;
         this.currentAgeEvaluation = null;
     }
@@ -29,20 +30,23 @@ class CacheService {
     setCurrentTrack(track) {
         // Do not set the track if it's the same as the current track
         // But still update the progress IF the user changed it!
-        const timeFetched = Date.now();
+        const timeLastUpdated = Date.now();
 
         if (this.currentTrack?.id === track.id) {
+            console.log('Track is unchanged');
             // Update progress IF it has been manually changed
-            const calculatedProgress = this.currentTrack.progress + (timeFetched - this.currentTrack.timeFetched);
+            const calculatedProgress = this.currentTrack.progress + (timeLastUpdated - this.timeLastUpdated);
             // If calculatedProgress is more than 2 seconds different than track.progress, update the progress
             if (Math.abs(calculatedProgress - track.progress) > 2000) {
+                console.log('Calculated is more than 2 seconds different than track.progress, updating progress');
                 this.currentTrack.progress = track.progress;
-                this.currentTrack.timeFetched = timeFetched;
+                this.timeLastUpdated = timeLastUpdated;
             }
             return;
         }
 
-        track.timeFetched = timeFetched;
+        console.log('Track is different, updating track');
+        track.timeLastUpdated = timeLastUpdated;
 
         this.currentTrack = track;
     }
@@ -63,6 +67,7 @@ class CacheService {
         }
         return {
             status: this.status,
+            timeLastUpdated: this.timeLastUpdated,
             track: {
                 id: this.currentTrack.id,
                 contentType: this.currentTrack.contentType,
@@ -71,7 +76,7 @@ class CacheService {
                 artist: this.currentTrack.artist,
                 imageUrl: this.currentTrack.imageUrl,
                 description: this.currentTrack.description,
-                progress: this.currentTrack.progress + (Date.now() - this.currentTrack.timeFetched),
+                progress: this.currentTrack.progress + (Date.now() - this.timeLastUpdated),
                 duration: this.currentTrack.duration,
                 playing: this.currentTrack.playing,
                 album: this.currentTrack.album,
@@ -84,7 +89,11 @@ class CacheService {
     }
 
     setCurrentLyrics(lyrics) {
-        this.currentLyrics = lyrics;
+        // Do a deep comparsion, if the lyrics are the same, don't update the cache
+        if (JSON.stringify(this.currentLyrics) !== JSON.stringify(lyrics)) {
+            this.currentLyrics = lyrics;
+            this.timeLastUpdated = Date.now();
+        }
     }
 
     getCurrentLyrics() {
@@ -92,7 +101,11 @@ class CacheService {
     }
 
     setCurrentAgeEvaluation(ageEvaluation) {
-        this.currentAgeEvaluation = ageEvaluation;
+        // Do a deep comparsion, if the age evaluation is the same, don't update the cache
+        if (JSON.stringify(this.currentAgeEvaluation) !== JSON.stringify(ageEvaluation)) {
+            this.currentAgeEvaluation = ageEvaluation;
+            this.timeLastUpdated = Date.now();
+        }
     }
 
     getCurrentAgeEvaluation() {
@@ -103,6 +116,7 @@ class CacheService {
         this.currentTrack = {
             playing: false,
         }
+        this.timeLastUpdated = null;
         this.currentLyrics = null;
         this.currentAgeEvaluation = null;
     }

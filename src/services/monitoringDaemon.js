@@ -70,6 +70,13 @@ class MonitoringDaemon {
             this.cacheService.setCurrentTrack(currentlyPlayingTrack);
         }
 
+        // If it's the same track, just set the track so we can update the progress
+        if (previousStateTrack && previousStateTrack.id === currentlyPlayingTrack.id) {
+            const spotifyUserProfile = await spotifyService.getCurrentUserProfile();
+            currentlyPlayingTrack.rawItem.spotifyUserId = spotifyUserProfile.id;
+            this.cacheService.setCurrentTrack(currentlyPlayingTrack);
+        }
+
         if (!this.cacheService.getCurrentLyrics()) {
             const currentLyrics = await this.fetchLyrics();
             this.cacheService.setCurrentLyrics(currentLyrics);
