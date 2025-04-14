@@ -177,7 +177,7 @@ const enrichWithAiEvaluation = async (mergedHistory, userId) => {
 
     try {
       // Fetch AI evaluation for the track
-      const evaluation = await aiEvaluationRepository.findEvaluation(trackId, userId);
+      let evaluation = await aiEvaluationRepository.findEvaluation(trackId, userId);
 
       // Fetch track data to get lyrics
       const trackData = await trackRepository.findTrackById(trackId);
@@ -187,6 +187,18 @@ const enrichWithAiEvaluation = async (mergedHistory, userId) => {
         // Limit lyrics to first 5000 characters
         lyrics = trackData.lyrics.substring(0, 5000);
       }
+
+      // If we have lyrics, but we do NOT have an AI evaluation, get it from the age evaluation service
+      // And then populate it in the DB
+      if (!evaluation && trackData) {
+        // Note that this will populate it in the DB...
+        evaluation = await ageEvaluationService.evaluateContentAge({
+          id: trackId,
+          type: 'track',
+          title: title
+        });
+      }
+
 
       if (evaluation) {
         // Add AI evaluation data to the item

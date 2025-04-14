@@ -109,8 +109,6 @@ const prepareContentForEvaluation = async (params) => {
             content += `## Episode Transcript\n\`\`\`\n${lyrics}\n\`\`\`\n`;
         }
     }
-
-    console.log('Content for evaluation:', content);
     return { content, lyricsSource };
 
   } catch (error) {
@@ -167,7 +165,7 @@ DO NOT wrap your response in markdown code blocks.`,
  * @param {string} type - Content type
  * @returns {Object} - Parsed response with confidence information
  */
-const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotifyUrl, type, spotifyUser) => {
+const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, type, spotifyUser) => {
   // Get raw content from completion
   let rawContent = completion.choices[0].message.content;
 
@@ -212,9 +210,6 @@ const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotif
   // Determine confidence level based on lyrics source
   let confidenceLevel = 'LOW';
   let confidenceExplanation = '';
-
-  // Safely check if spotifyUrl exists and contains spotify.com
-  const fromSpotify = spotifyUrl && spotifyUrl.includes('spotify.com');
 
   if (lyricsSource && lyricsSource.includes('spotify')) {
     confidenceLevel = 'HIGH';
@@ -261,7 +256,7 @@ const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, spotif
  * @returns {Promise<Object>} - Age evaluation result
  */
 const evaluateContentAge = async (params) => {
-  const { id, type, title, spotifyUrl } = params;
+  const { id, type, title } = params;
 
   if (!id || !type || !title) {
     throw new Error('Missing required parameters: id, type, and title');
@@ -300,10 +295,9 @@ const evaluateContentAge = async (params) => {
     console.log('No content found for evaluation, returning null');
     return null;
   }
-  console.log('Content for evaluation:', content);
   try {
     const completion = await requestAgeEvaluation(content, title);
-    return parseResponseAndGenerateEvaluation(completion, id, lyricsSource, spotifyUrl, type, spotifyUser);
+    return parseResponseAndGenerateEvaluation(completion, id, lyricsSource, type, spotifyUser);
   } catch (error) {
     console.error('Age evaluation API error:', error.message);
     throw error;

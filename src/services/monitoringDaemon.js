@@ -350,8 +350,7 @@ class MonitoringDaemon {
             const evaluation = await ageEvaluationService.evaluateContentAge({
                 id,
                 type: contentType,
-                title,
-                spotifyUrl
+                title
             });
             result.evaluation = evaluation;
             console.log('Monitoring daemon: fetchAgeEvaluation(): Age evaluation: ' + JSON.stringify(evaluation));
