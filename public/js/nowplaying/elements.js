@@ -19,6 +19,10 @@ const Elements = (() => {
     elements.userDisplayNameEl = document.getElementById('user-display-name');
     elements.userEmailEl = document.getElementById('user-email');
 
+    // Connection status elements
+    elements.connectionStatusContainerEl = document.getElementById('connection-status-container');
+    elements.connectionStatusTextEl = document.getElementById('connection-status-text');
+
     // Track Elements
     elements.albumArtEl = document.getElementById('album-art');
     elements.trackNameEl = document.getElementById('track-name');
@@ -43,6 +47,7 @@ const Elements = (() => {
     elements.episodeNameEl = document.getElementById('episode-name');
     elements.releaseDateEl = document.getElementById('release-date');
     elements.episodeDescriptionEl = document.getElementById('episode-description');
+    elements.podcastDescriptionEl = document.getElementById('podcast-description');
     elements.podcastProgressBarFillEl = document.getElementById('podcast-progress-bar-fill');
     elements.podcastCurrentTimeEl = document.getElementById('podcast-current-time');
     elements.podcastTotalTimeEl = document.getElementById('podcast-total-time');

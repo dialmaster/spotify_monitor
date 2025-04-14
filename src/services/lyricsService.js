@@ -281,6 +281,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
         const allElements = document.querySelectorAll('a, button, div[role="button"]');
         for (const el of allElements) {
           if (hasTranscriptText(el)) {
+            console.log(`Found transcript link with general approach: ${el.textContent}`);
             return { found: true, general: true };
           }
         }
@@ -291,26 +292,10 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
       console.log('Transcript link detection result:', hasTranscriptLink);
 
       if (!hasTranscriptLink.found) {
-        // Try to check the page content directly for transcript content
-        const hasTranscriptContent = await page.evaluate(() => {
-          // Look for elements that might contain transcript text
-          const transcript = document.body.innerText;
-
-          // Check if the page already has significant text content that might be a transcript
-          // (at least 20 lines with reasonable length)
-          const lines = transcript.split('\n').filter(line => line.trim().length > 10);
-          return lines.length > 20;
-        });
-
-        if (hasTranscriptContent) {
-          console.log('No transcript tab found, but page appears to contain transcript content directly');
-          // Continue to extract content
-        } else {
           console.log('No transcript link or content found - this podcast may not have a transcript');
           await page.close().catch(e => console.log('Error closing page:', e.message));
           await browserPool.releaseBrowser();
           return null;
-        }
       } else {
         // If we found a transcript link/tab, click it
         console.log('Clicking on Transcript tab...');

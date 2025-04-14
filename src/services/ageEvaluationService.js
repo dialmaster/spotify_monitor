@@ -48,56 +48,75 @@ const checkWhitelist = (id, title) => {
  * @returns {Promise<Object>} - Content and metadata for evaluation
  */
 const prepareContentForEvaluation = async (params) => {
-  const { id, type, title, artist, description } = params;
+  const { id } = params;
 
-  // Try to fetch lyrics/transcript from the database
-  let lyrics = null;
-  let lyricsSource = null;
-
+  // ONLY use the data from the DB.... everything should be in there.
   try {
     const storedTrack = await trackRepository.findTrackById(id);
 
-    if (storedTrack && storedTrack.lyrics) {
-      lyrics = storedTrack.lyrics;
-      lyricsSource = storedTrack.lyricsSource;
+    if (!storedTrack) {
+      console.log(`Track not found in DB for "${id}"`);
+      return { content: null, lyricsSource: null };
+    }
+
+    if (storedTrack.lyrics) {
+      console.log(`Found DB stored lyrics/transcript for track id: ${id}`);
     } else {
-      console.log(`No stored lyrics/transcript found for "${id}"`);
+      console.log(`Track found in DB but no stored lyrics/transcript found for "${id}"`);
     }
+
+    const { lyricsSource, artist, album, htmlDescription, description, type, title } = storedTrack;
+    const MAX_CONTENT_LENGTH = 30000;
+    let lyrics = storedTrack.lyrics;
+    if (lyrics && lyrics.length > MAX_CONTENT_LENGTH) {
+        lyrics = lyrics.substring(0, MAX_CONTENT_LENGTH);
+        truncationMessage = `\n[Content truncated due to length. Evaluation based on first ${MAX_CONTENT_LENGTH} characters.]`;
+        lyrics += truncationMessage;
+    }
+
+    // Prepare content for evaluation using Markdown formatting
+    let content = '';
+    if (type === 'track') {
+        content = `# Music Track Title: ${title}\n\n`;
+
+        if (artist) {
+            content += `## Artist\n\`\`\`\n${artist}\n\`\`\`\n\n`;
+        }
+
+        if (album) {
+            content += `## Album\n\`\`\`\n${album}\n\`\`\`\n\n`;
+        }
+
+        if (lyrics) {
+            content += `## Lyrics\n\`\`\`\n${lyrics}\n\`\`\`\n`;
+        }
+    } else if (type === 'episode') {
+        content = `# Podcast Episode Title: ${title}\n\n`;
+
+        if (artist) {
+            content += `## Creator\n\`\`\`\n${artist}\n\`\`\`\n\n`;
+        }
+
+        if (description) {
+            content += `## Podcast Description or Tagline\n\`\`\`\n${description}\n\`\`\`\n\n`;
+        }
+
+        if (htmlDescription) {
+            content += `## Episode Description\n\`\`\`\n${htmlDescription}\n\`\`\`\n\n`;
+        }
+
+        if (lyrics) {
+            content += `## Episode Transcript\n\`\`\`\n${lyrics}\n\`\`\`\n`;
+        }
+    }
+
+    console.log('Content for evaluation:', content);
+    return { content, lyricsSource };
+
   } catch (error) {
-    console.error(`Error fetching stored lyrics content for ${id}:`, error.message);
-    // Continue without lyrics if there's an error
+    console.error(`Error fetching stored track content for ${id}:`, error.message);
   }
-
-  // Prepare content for evaluation
-  let content = '';
-  if (type === 'track') {
-    content = `Track: ${title}\nArtist: ${artist || 'Unknown'}\n`;
-    if (lyrics) {
-      content += `\nLyrics:\n${lyrics}`;
-    }
-  } else if (type === 'episode') {
-    content = `Podcast: ${title}\n`;
-    if (description) {
-      content += `\nDescription:\n${description}`;
-    }
-    if (lyrics) {
-      content += `\nTranscript:\n${lyrics}`;
-    }
-  }
-
-  // Truncate content to 30000 characters if needed
-  // Good enough for a pretty good evaluation for podcasts
-  const MAX_CONTENT_LENGTH = 30000;
-  let truncationMessage = '';
-
-  if (content.length > MAX_CONTENT_LENGTH) {
-    console.log(`Content for "${title}" is too long (${content.length} chars), truncating to ${MAX_CONTENT_LENGTH} chars`);
-    content = content.substring(0, MAX_CONTENT_LENGTH);
-    truncationMessage = `\n[Content truncated due to length. Evaluation based on first ${MAX_CONTENT_LENGTH} characters.]`;
-    content += truncationMessage;
-  }
-
-  return { content, lyricsSource };
+  return { content: null, lyricsSource: null };
 };
 
 /**
@@ -108,7 +127,7 @@ const prepareContentForEvaluation = async (params) => {
  */
 const requestAgeEvaluation = async (content, title) => {
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4.1-mini",
     temperature: 0.2,
     messages: [
       {
@@ -275,8 +294,13 @@ const evaluateContentAge = async (params) => {
     throw new Error('OpenAI API not configured');
   }
 
+  console.log('Evaluating content age for:', id, type, title);
   const { content, lyricsSource } = await prepareContentForEvaluation(params);
-
+  if (!content) {
+    console.log('No content found for evaluation, returning null');
+    return null;
+  }
+  console.log('Content for evaluation:', content);
   try {
     const completion = await requestAgeEvaluation(content, title);
     return parseResponseAndGenerateEvaluation(completion, id, lyricsSource, spotifyUrl, type, spotifyUser);

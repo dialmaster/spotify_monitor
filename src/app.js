@@ -77,9 +77,7 @@ const server = app.listen(config.port, '0.0.0.0', async () => {
             const spotifyInitialized = await spotifyService.initialize();
             if (spotifyInitialized) {
               console.log('Successfully initialized Spotify service with saved tokens');
-              spotifyService.startMonitoring();
-              // Start the monitoring daemon here so it can start updating the cache
-              // monitoringDaemon.start();
+              monitoringDaemon.start();
             } else {
               console.log('No valid Spotify tokens found, please authenticate via the web interface');
             }

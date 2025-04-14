@@ -1,9 +1,7 @@
 const axios = require('axios');
 const querystring = require('querystring');
 const config = require('../config');
-const logService = require('./logService');
 const trackRepository = require('../repositories/trackRepository');
-const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
 const spotifyAuthRepository = require('../repositories/spotifyAuthRepository');
 
 // Helper function to generate a random string for state
@@ -141,7 +139,6 @@ const refreshAccessToken = async () => {
 
 const getCurrentUserProfile = async () => {
   if (userInfo.fetched) {
-    console.log('User profile already fetched, using cached data');
     return userInfo;
   }
 
@@ -296,23 +293,24 @@ const getCurrentlyPlaying = async () => {
         if (playbackData.type === 'track') {
           trackData.artist = playbackData.item.artists.map(artist => artist.name).join(', ');
           trackData.album = playbackData.item.album?.name;
+          trackData.description = playbackData.item.album?.description;
           trackData.albumArt = playbackData.item.album?.images?.[0]?.url;
           trackData.imageUrl = playbackData.item.album?.images?.[0]?.url;
+          trackData.htmlDescription = playbackData.item.html_description;
         }
         // Handle episode-specific fields
         else if (playbackData.type === 'episode') {
           trackData.artist = playbackData.item.show?.publisher;
           trackData.album = playbackData.item.show?.name;
-          trackData.albumArt = playbackData.item.images?.[0]?.url;
-          trackData.imageUrl = playbackData.item.images?.[0]?.url;
-          trackData.description = playbackData.item.description;
+          trackData.albumArt = playbackData.item.show.images?.[0]?.url;
+          trackData.imageUrl = playbackData.item.show.images?.[0]?.url;
+          trackData.description = playbackData.item.show.description;
+          trackData.htmlDescription = playbackData.item.html_description;
         }
 
         const result = await trackRepository.saveTrack(trackData);
         if (result.created) {
           console.log(`New ${playbackData.type} saved to database with ID: ${trackData.trackId}`);
-        } else {
-          console.log(`${playbackData.type} already exists in database with ID: ${trackData.trackId}`);
         }
       } catch (dbError) {
         console.error('Error saving track to database:', dbError.message);
@@ -428,59 +426,6 @@ const skipToNextTrack = async () => {
   }
 };
 
-// Monitor function
-const monitorCurrentlyPlaying = async () => {
-  try {
-    const data = await getCurrentlyPlaying();
-
-    if (!data) {
-      console.log('No data received from Spotify API');
-      return;
-    }
-
-    const timestamp = new Date().toISOString();
-
-    if (!data.playing) {
-      // Clean up tracking when nothing is playing
-      logService.cleanupTracking(null);
-      return;
-    }
-
-    const progress = Math.floor(data.progress_ms / 1000);
-    // Make sure we have user information
-    if (!userInfo.id) {
-      await getCurrentUserProfile();
-    }
-    data.item.spotifyUserId = userInfo.id;
-
-    if (data.type === 'track' && data.item) {
-      const duration = Math.floor(data.item.duration_ms / 1000);
-      console.log(`[${timestamp}] Now playing: ${data.item.name} by ${data.item.artists.map(artist => artist.name).join(', ')} (${progress}s / ${duration}s)`);
-      // Log playback to file (will only log new tracks)
-      logService.logPlaybackStarted(data.item, 'track');
-    } else if (data.type === 'episode') {
-      if (data.item) {
-        const duration = Math.floor(data.item.duration_ms / 1000);
-        const showName = data.item.show?.name || 'Unknown Show';
-        const episodeName = data.item.name || 'Unknown Episode';
-        const releaseDate = data.item.release_date || 'Unknown Date';
-        console.log(`[${timestamp}] Now playing podcast: ${showName} - ${episodeName} (Released: ${releaseDate}) (${progress}s / ${duration}s)`);
-
-        // Log podcast playback to file (will only log new episodes)
-        logService.logPlaybackStarted(data.item, 'episode');
-      } else {
-        console.log(`[${timestamp}] Now playing podcast episode (${progress}s elapsed)`);
-      }
-    } else {
-      console.log(`[${timestamp}] Playing content of type: ${data.type} (${progress}s elapsed)`);
-    }
-  } catch (error) {
-    console.error(`[${new Date().toISOString()}] Monitoring error:`, error.message);
-    if (error.message.includes('401')) {
-      console.error('Authentication error - you may need to re-authorize. Please visit http://localhost:' + config.port + '/login');
-    }
-  }
-};
 
 // Initialize the Spotify service - load tokens and start monitoring if available
 const initialize = async () => {
@@ -506,37 +451,6 @@ const initialize = async () => {
     console.log('No saved tokens found, user will need to authenticate');
     return false;
   }
-};
-
-// Start monitoring
-const startMonitoring = async () => {
-  console.log('Starting Spotify monitoring...');
-
-  // If tokens are already loaded, we can skip initialization
-  // This is needed because app.js might have already initialized the service
-  const tokensAvailable = tokenInfo.access_token && tokenInfo.refresh_token;
-
-  // Only run initialize if not already authenticated
-  if (!tokensAvailable) {
-    const initialized = await initialize();
-
-    if (!initialized) {
-      console.log('Not authenticated. Please visit http://localhost:' + config.port + '/login');
-      return;
-    }
-  }
-
-  // Run immediately
-  monitorCurrentlyPlaying().catch(error => {
-    console.error('Error in initial monitoring check:', error.message);
-  });
-
-  // Then set interval
-  setInterval(() => {
-    monitorCurrentlyPlaying().catch(error => {
-      console.error('Error in monitoring interval:', error.message);
-    });
-  }, config.monitorInterval);
 };
 
 // Get authorization URL
@@ -568,8 +482,6 @@ module.exports = {
   exchangeCodeForToken,
   getCurrentlyPlaying,
   getRecentlyPlayed,
-  monitorCurrentlyPlaying,
-  startMonitoring,
   getAuthorizationUrl,
   getCachedData,
   skipToNextTrack,

@@ -141,7 +141,7 @@ const logAutoSkip = (item, reason = 'BLOCK rating', evaluation = null) => {
   const timestamp = new Date().toISOString();
   const logFile = getLogFilePath();
 
-  let logMessage = `[${timestamp}] Auto-skipped "${item.name}" [id: ${item.id}] due to ${reason}`;
+  let logMessage = `[${timestamp}] Auto-skipped "${item.title}" [id: ${item.id}] due to ${reason}`;
 
   // Write to log file
   fs.appendFileSync(logFile, logMessage + '\n');
@@ -170,31 +170,29 @@ const sendBlockNotification = async (item, evaluation, autoSkipped) => {
     const username = config.spotifyUserName || 'unknown';
     let message = `BLOCKED CONTENT ALERT FOR USER ${username}: `;
 
-    if (item.type === 'track' || item.artists) {
+    if (item.contentType === 'track') {
       // Format for track
-      const artistNames = item.artists.map(artist => artist.name).join(', ');
-      message += `Track: "${item.name}". `;
-      message += `Artist: ${artistNames}. `;
+      message += `Track: "${item.title}". `;
+      message += `Artist: ${item.artist}. `;
 
-      if (item.album && item.album.name) {
-        message += `Album: "${item.album.name}". `;
+      if (item.album) {
+        message += `Album: "${item.album}". `;
       }
-    } else if (item.type === 'episode' || item.show) {
+    } else if (item.contentType === 'episode') {
       // Format for podcast episode
-      const showName = item.show?.name || 'Unknown Show';
-      message += `Podcast: "${showName}". `;
-      message += `Episode: "${item.name}". `;
+      message += `Podcast: "${item.album}". `;
+      message += `Episode: "${item.title}". `;
     } else {
-      message += `Content: "${item.name}". `;
+      message += `Content: "${item.title}". `;
     }
 
     // Add age level information
     if (evaluation) {
-      message += `Age Rating: ${evaluation.ageRating}. `;
+      message += `Age Rating: ${evaluation.evaluation.ageRating}. `;
 
       // Add reasoning if available
-      if (evaluation.explanation) {
-        const cleanExplanation = evaluation.explanation
+      if (evaluation.evaluation.explanation) {
+        const cleanExplanation = evaluation.evaluation.explanation
           .replace(/\n/g, ' ')
           .replace(/\s\s+/g, ' ')
           .trim();

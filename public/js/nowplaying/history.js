@@ -2,18 +2,21 @@ const History = (() => {
   let elements = null;
   let historyData = []; // Store the history data for use in the modal
   let historyModal = null;
-
+  let toast = null;
   const initialize = (elementRefs, historyModalInstance) => {
     elements = elementRefs;
     historyModal = historyModalInstance;
 
     return {
+      setToastModule: (toastModule) => { toast = toastModule; },
       fetchRecentlyPlayed
     };
   };
 
   // Fetch recently played tracks and update UI
-  const fetchRecentlyPlayed = async () => {
+  // If showToast is true, then show a toast notification
+  // If a track is currently playing, then we know the top item is the currently playing track
+  const fetchRecentlyPlayed = async (showToast = false, currentlyPlaying = false) => {
     try {
       elements.historyLoadingEl.classList.remove('hidden');
       elements.noHistoryEl.classList.add('hidden');
@@ -39,6 +42,17 @@ const History = (() => {
       // Clear existing items
       elements.historyListEl.innerHTML = '';
 
+      // If currentlyPlaying is true, then remove the first item from the items array
+      // Eg, don't show the current item in the history list
+      if (currentlyPlaying) {
+        items.shift();
+      }
+
+      // If showToast is true and currentlyPlaying is true, AND the first item is blocked, then show a toast notification
+      if (showToast && currentlyPlaying && items[0].aiEvaluation.level.toUpperCase() === 'BLOCK') {
+        toast.showToast(`${items[0].track.name} has been skipped due to AI evaluation.`);
+      }
+
       // Add each history item
       items.forEach((item, index) => {
         const historyItemEl = document.createElement('div');
@@ -51,6 +65,7 @@ const History = (() => {
         // Get the item details based on type
         const historyTrack = item.track;
         const isTrack = !!historyTrack;
+        const isEpisode = item.track.type === 'episode';
 
         // For episodes, the item itself is the content
         const content = isTrack ? historyTrack : item.episode;

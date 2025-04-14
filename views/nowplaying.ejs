@@ -32,6 +32,12 @@
       </div>
     </div>
 
+    <div id="connection-status-container" class="hidden">
+      <div class="connection-status">
+        <span id="connection-status-text">Disconnected</span>
+      </div>
+    </div>
+
     <div id="now-playing-container">
       <div id="loading">
         <p>Connecting to Spotify...</p>
@@ -101,13 +107,8 @@
         <div class="info-container">
           <h2>
             <span id="podcast-name"></span>
-            <a id="spotify-podcast-link" href="#" target="_blank" class="spotify-link hidden">
-              <img src="/img/spotify-icon.png" alt="Spotify" class="spotify-icon"> Open in Spotify
-            </a>
           </h2>
           <h3 id="episode-name"></h3>
-          <p id="release-date"></p>
-          <p id="episode-description" class="description"></p>
           <div class="progress-container">
             <div class="progress-bar">
               <div id="podcast-progress-bar-fill"></div>
@@ -116,6 +117,14 @@
               </div>
             </div>
           </div>
+          <p id="podcast-description"></p>
+          <div class='release-date-and-spotify-link-container'>
+            <p id="release-date"></p>
+            <a id="spotify-podcast-link" href="#" target="_blank" class="spotify-link hidden">
+              <img src="/img/spotify-icon.png" alt="Spotify" class="spotify-icon"> Open in Spotify
+            </a>
+          </div>
+
 
           <div id="podcast-age-container" class="age-container hidden">
             <h3>AI Evaluation</h3>
@@ -131,6 +140,10 @@
             <div id="podcast-age-error" class="age-error hidden">Unable to evaluate content</div>
           </div>
 
+          <div id="episode-description-container">
+            <h3>Episode Description</h3>
+            <p id="episode-description" class="description"></p>
+          </div>
 
           <div class="info-section">
             <div id="podcast-transcript-container" class="hidden">

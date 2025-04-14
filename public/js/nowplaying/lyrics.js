@@ -10,7 +10,7 @@ const Lyrics = (() => {
     ui = uiModule;
 
     return {
-      fetchAndDisplayLyrics,
+      displayLyricsOrTranscript,
       clearCache: () => lyricsCache.clear(),
       setAgeEvaluationModule: (ageEvalModule) => { ageEvaluation = ageEvalModule; },
       // Add cache access methods
@@ -34,113 +34,97 @@ const Lyrics = (() => {
     };
   };
 
-  // Fetch and display lyrics for a track
-  const fetchAndDisplayLyrics = async (trackName, artistName) => {
-    try {
-      // Reset UI
-      elements.lyricsContainerEl.classList.remove('hidden');
-      elements.lyricsContentEl.classList.add('hidden');
-      elements.lyricsNotFoundEl.classList.add('hidden');
-      elements.lyricsSourceEl.classList.add('hidden');
-      elements.lyricsLoadingEl.classList.remove('hidden');
-      elements.lyricsLoadingEl.textContent = `Attempting to fetch lyrics for "${trackName}"...`;
+  const displayLyricsOrTranscript = (data) => {
+    const isTrack = data.track.contentType === 'track';
+    const contentType = isTrack ? 'track' : 'episode';
 
-      // Get current data to extract Spotify URL
-      const currentData = ui.getCurrentData();
+    // Select the appropriate elements based on content type
+    const containers = {
+      container: isTrack ? elements.lyricsContainerEl : elements.podcastTranscriptContainerEl,
+      otherContainer: isTrack ? elements.podcastTranscriptContainerEl : elements.lyricsContainerEl,
+      loading: isTrack ? elements.lyricsLoadingEl : elements.podcastTranscriptLoadingEl,
+      notFound: isTrack ? elements.lyricsNotFoundEl : elements.podcastTranscriptNotFoundEl,
+      content: isTrack ? elements.lyricsContentEl : elements.podcastTranscriptContentEl,
+      sourceLink: isTrack ? elements.lyricsSourceLinkEl : elements.podcastTranscriptSourceLinkEl,
+      sourceContainer: isTrack ? elements.lyricsSourceEl : elements.podcastTranscriptSourceEl
+    };
 
-      // Get Spotify URL for the current track if available
-      let spotifyUrl = '';
-      if (currentData && currentData.item && currentData.item.external_urls && currentData.item.external_urls.spotify) {
-        spotifyUrl = currentData.item.external_urls.spotify;
-      }
+    // Show the appropriate container and hide the other
+    containers.container.classList.remove('hidden');
+    containers.otherContainer.classList.add('hidden');
 
-      // Check cache first
-      const cacheKey = `${trackName}-${artistName}`;
-      if (lyricsCache.has(cacheKey)) {
-        console.log(`Using cached lyrics for "${trackName}" by ${artistName}`);
-        const cachedData = lyricsCache.get(cacheKey);
-        displayLyrics(cachedData);
-        return;
-      }
+    // Handle cases where lyrics/transcript data is missing or has errors
+    if (!data.lyrics || !data.lyrics.lyrics) {
+      return handleMissingContent(data, containers, contentType);
+    }
 
-      // Fetch lyrics from the API with the spotify URL included
-      const apiUrl = `/api/lyrics?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}${spotifyUrl ? `&spotifyUrl=${encodeURIComponent(spotifyUrl)}` : ''}`;
-      console.log(`Fetching lyrics from: ${apiUrl}`);
-      const response = await fetch(apiUrl);
+    // Check if content is already displayed and return early if it is
+    const formattedContent = data.lyrics.lyrics.replace(/\n/g, '<br>');
+    if (containers.content.innerHTML === formattedContent) {
+      containers.loading.classList.add('hidden');
+      containers.content.classList.remove('hidden');
+      return;
+    }
 
-      if (!response.ok) {
-        throw new Error(`Error fetching lyrics: ${response.status}`);
-      }
+    // Display source URL if available
+    if (data.track.spotifyUrl) {
+      setupSourceLink(data, containers, contentType);
+    }
 
-      const data = await response.json();
+    // Display the content
+    containers.loading.classList.add('hidden');
+    containers.content.innerHTML = formattedContent;
+    containers.content.classList.remove('hidden');
+  };
 
-      // Store in cache
-      lyricsCache.set(cacheKey, data);
+  /**
+   * Handles the case when content (lyrics or transcript) is missing
+   */
+  const handleMissingContent = (data, containers, contentType) => {
+    const contentLabel = contentType === 'track' ? 'lyrics' : 'transcript';
 
-      displayLyrics(data);
-    } catch (error) {
-      console.error('Error fetching lyrics:', error);
-      elements.lyricsLoadingEl.classList.add('hidden');
-      elements.lyricsNotFoundEl.classList.remove('hidden');
-      elements.lyricsNotFoundEl.textContent = `Error: ${error.message}`;
-
-      // Even if lyrics fetch fails, we should still do age evaluation
-      const currentData = ui.getCurrentData();
-      if (currentData && currentData.item && ageEvaluation) {
-        ageEvaluation.fetchAndDisplayAgeEvaluation(currentData.item, currentData.type);
-      }
+    if (data.lyrics?.error?.includes('Could not find lyrics') || data.lyrics?.error?.includes('No transcript available')) {
+      containers.loading.classList.add('hidden');
+      containers.notFound.classList.remove('hidden');
+      containers.notFound.textContent = `No ${contentLabel} found for this ${contentType}`;
+      containers.content.classList.add('hidden');
+    } else if (data.lyrics?.error) {
+      containers.loading.classList.add('hidden');
+      containers.notFound.classList.remove('hidden');
+      containers.notFound.textContent = `Error fetching ${contentLabel}`;
+      containers.content.classList.add('hidden');
+      containers.sourceLink.classList.add('hidden');
+    } else {
+      containers.notFound.classList.add('hidden');
+      containers.loading.classList.remove('hidden');
+      containers.loading.textContent = `Attempting to fetch ${contentLabel} for ${contentType === 'track' ? contentType : `"${data.track.title}"`}...`;
+      containers.content.classList.add('hidden');
+      containers.sourceLink.classList.add('hidden');
     }
   };
 
-  // Helper function to display lyrics
-  const displayLyrics = (data) => {
-    // Hide loading
-    elements.lyricsLoadingEl.classList.add('hidden');
+  /**
+   * Sets up the source link for the content
+   */
+  const setupSourceLink = (data, containers, contentType) => {
+    containers.sourceLink.href = data.track.spotifyUrl;
 
-    // If lyrics were found
-    if (data.lyrics) {
-      // Format and display lyrics
-      elements.lyricsContentEl.innerHTML = data.lyrics.replace(/\n/g, '<br>');
-      elements.lyricsContentEl.classList.remove('hidden');
-
-      // Set up source link
-      if (data.url) {
-        elements.lyricsSourceLinkEl.href = data.url;
-
-        // Update source text based on where the lyrics came from
-        if (data.source === 'spotify-api') {
-          elements.lyricsSourceLinkEl.textContent = 'Source: Spotify API';
-        } else if (data.source === 'spotify-web') {
-          elements.lyricsSourceLinkEl.textContent = 'Source: Spotify Web';
-        } else if (data.source === 'genius') {
-          elements.lyricsSourceLinkEl.textContent = 'Source: Genius';
-        } else {
-          elements.lyricsSourceLinkEl.textContent = 'View source';
-        }
-
-        elements.lyricsSourceEl.classList.remove('hidden');
-      }
-
-      // Now that we have lyrics, fetch age evaluation
-      const currentData = ui.getCurrentData();
-      if (currentData && currentData.item && currentData.type === 'track' && ageEvaluation) {
-        ageEvaluation.fetchAndDisplayAgeEvaluation(currentData.item, currentData.type);
+    if (contentType === 'track') {
+      // Update source text based on where the lyrics came from
+      if (data.lyrics.source === 'spotify-api') {
+        containers.sourceLink.textContent = 'Source: Spotify API';
+      } else if (data.lyrics.source === 'spotify-web') {
+        containers.sourceLink.textContent = 'Source: Spotify Web';
+      } else if (data.lyrics.source === 'genius') {
+        containers.sourceLink.textContent = 'Source: Genius';
+      } else {
+        containers.sourceLink.textContent = 'View source';
       }
     } else {
-      // Show not found message
-      elements.lyricsNotFoundEl.classList.remove('hidden');
-      elements.lyricsNotFoundEl.textContent = 'No lyrics found for this track';
-
-      if (data.error) {
-        console.error('Lyrics error:', data.error);
-      }
-
-      // Even without lyrics, we can still evaluate based on track info
-      const currentData = ui.getCurrentData();
-      if (currentData && currentData.item && currentData.type === 'track' && ageEvaluation) {
-        ageEvaluation.fetchAndDisplayAgeEvaluation(currentData.item, currentData.type);
-      }
+      containers.sourceLink.textContent = 'Source: Spotify Podcast Transcript';
     }
+
+    containers.sourceContainer.classList.remove('hidden');
   };
 
   return {

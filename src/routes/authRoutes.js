@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const spotifyService = require('../services/spotifyService');
-
+const monitoringDaemon = require('../services/monitoringDaemon');
 // Route to start the authentication process
 router.get('/login', (req, res) => {
   const state = spotifyService.generateRandomString(16);
@@ -30,8 +30,9 @@ router.get('/callback', async (req, res) => {
     const success = await spotifyService.exchangeCodeForToken(code);
 
     if (success) {
-      // Start monitoring after successful authentication
-      spotifyService.startMonitoring();
+      if (!monitoringDaemon.isRunning) {
+        monitoringDaemon.start();
+      }
       // Redirect to the now playing page
       res.redirect('/nowplaying');
     } else {

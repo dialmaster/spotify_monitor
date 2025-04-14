@@ -17,8 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const player = Player.initialize(elements, ui);
 
   // Connect related modules
+  history.setToastModule(toast);
   player.setLyricsModule(lyrics);
   player.setTranscriptModule(transcript);
+  player.setAgeEvaluationModule(ageEvaluation);
+  ui.setHistoryModule(history);
   lyrics.setAgeEvaluationModule(ageEvaluation);
   transcript.setAgeEvaluationModule(ageEvaluation);
   transcript.setLyricsModule(lyrics);
@@ -42,19 +45,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Periodically check server connectivity with a ping
+  const serverHealthCheckInterval = 10000; // 10 seconds
+  let healthCheckIntervalId = setInterval(checkServerHealth, serverHealthCheckInterval);
+
+  // Function to check server health
+  async function checkServerHealth() {
+    try {
+      // Use the simple health endpoint that just returns OK
+      const response = await fetch('/api/health', {
+        method: 'GET',
+        cache: 'no-store'
+      });
+
+      if (response.ok) {
+        // If player is currently in a disconnected state but server is healthy,
+        // the player module will automatically try to reconnect on its own schedule
+        console.log('Server health check: OK');
+      } else {
+        console.log('Server health check failed with status:', response.status);
+      }
+    } catch (error) {
+      console.log('Server health check failed:', error.message);
+    }
+  }
+
   // Initial data fetches
   player.fetchCurrentlyPlaying();
   history.fetchRecentlyPlayed();
   userProfile.fetchUserProfile();
 
-  // Set up refresh intervals
-  setInterval(player.fetchCurrentlyPlaying, 7000);
-  const historyRefreshInterval = setInterval(history.fetchRecentlyPlayed, 240000);
-
   // Clear cache on page unload
   window.addEventListener('beforeunload', () => {
     lyrics.clearCache();
     ageEvaluation.clearCache();
-    console.log('Caches cleared');
+
+    // Close SSE connection
+    if (player && typeof player.closeConnection === 'function') {
+      player.closeConnection();
+    }
+
+    // Clear health check interval
+    if (healthCheckIntervalId) {
+      clearInterval(healthCheckIntervalId);
+    }
+
+    console.log('Caches cleared and intervals cleared');
   });
 });

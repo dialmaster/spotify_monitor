@@ -15,6 +15,14 @@
   --font-size-xl: 1.5rem;
 }
 
+#podcast-container #podcast-description {
+  font-style: italic !important;
+  font-size: var(--font-size-sm) !important;
+  max-height: 140px !important;
+  overflow-y: hidden !important;
+  color: #b3b3b3 !important;
+}
+
 /* Additional styles for age rating */
 .age-container {
   margin-top: var(--spacing-lg);
@@ -235,7 +243,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
+  margin-top: var(--spacing-sm);
 }
 
 /* Consistent section styling */
@@ -298,11 +306,21 @@ header {
   color: #b3b3b3;
 }
 
+.release-date-and-spotify-link-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-sm);
+  justify-content: space-between;
+  width: 100%;
+}
+
+
 /* Styles for transcripts */
 #podcast-transcript-container, #lyrics-container {
-  margin-top: var(--spacing-lg);
-  border-top: 1px solid #333;
+  margin-top: 0;
   padding-top: var(--spacing-md);
+  width: 100%;
 }
 
 #podcast-transcript-container h3, #lyrics-container h3 {
@@ -365,6 +383,38 @@ header {
 
 #user-email {
   font-style: italic;
+  padding-left: var(--spacing-sm);
+}
+
+/* Connection status styles */
+#connection-status-container {
+  background-color: #222;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.3rem;
+  margin: 0 auto 1rem;
+  display: flex;
+  justify-content: center;
+  width: fit-content;
+}
+
+.connection-status {
+  text-align: center;
+}
+
+#connection-status-text {
+  font-weight: bold;
+}
+
+.connection-status-connected {
+  color: #1DB954;
+}
+
+.connection-status-disconnected {
+  color: #f44336;
+}
+
+.connection-status-connecting {
+  color: #ff9800;
 }
 
 /* Consistent spacing for all hidden sections */
