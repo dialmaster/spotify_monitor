@@ -127,7 +127,7 @@ const prepareContentForEvaluation = async (params) => {
  */
 const requestAgeEvaluation = async (content, title) => {
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4.1-mini",
     temperature: 0.2,
     messages: [
       {
