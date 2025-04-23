@@ -3,6 +3,7 @@ const config = require('../config');
 const aiEvaluationRepository = require('../repositories/aiEvaluationRepository');
 const trackRepository = require('../repositories/trackRepository');
 const spotifyService = require('./spotifyService');
+const { logger } = require('./logService');
 // Initialize OpenAI if API key is available
 let openai = null;
 
@@ -11,10 +12,10 @@ if (config.openAiApiKey) {
     openai = new OpenAI({
       apiKey: config.openAiApiKey
     });
-    console.log('OpenAI initialized successfully');
+    logger.info('OpenAI initialized successfully');
   } catch (error) {
-    console.error('Error initializing OpenAI:', error.message);
-    console.log('Age evaluation feature will be disabled');
+    logger.error('Error initializing OpenAI:', error.message);
+    logger.info('Age evaluation feature will be disabled');
   }
 }
 
@@ -27,7 +28,7 @@ if (config.openAiApiKey) {
 const checkWhitelist = (id, title) => {
   const isWhitelisted = config.whitelistTrackIDs && config.whitelistTrackIDs.includes(id);
   if (isWhitelisted) {
-    console.log(`Track "${title}" (${id}) is whitelisted - skipping age evaluation`);
+    logger.info(`Track "${title}" (${id}) is whitelisted - skipping age evaluation`);
     const response = {
       ageRating: 'Whitelisted',
       explanation: 'Track is whitelisted',
@@ -55,14 +56,14 @@ const prepareContentForEvaluation = async (params) => {
     const storedTrack = await trackRepository.findTrackById(id);
 
     if (!storedTrack) {
-      console.log(`Track not found in DB for "${id}"`);
+      logger.info(`Track not found in DB for "${id}"`);
       return { content: null, lyricsSource: null };
     }
 
     if (storedTrack.lyrics) {
-      console.log(`Found DB stored lyrics/transcript for track id: ${id}`);
+      logger.info(`Found DB stored lyrics/transcript for track id: ${id}`);
     } else {
-      console.log(`Track found in DB but no stored lyrics/transcript found for "${id}"`);
+      logger.info(`Track found in DB but no stored lyrics/transcript found for "${id}"`);
     }
 
     const { lyricsSource, artist, album, htmlDescription, description, type, title } = storedTrack;
@@ -112,7 +113,7 @@ const prepareContentForEvaluation = async (params) => {
     return { content, lyricsSource };
 
   } catch (error) {
-    console.error(`Error fetching stored track content for ${id}:`, error.message);
+    logger.error(`Error fetching stored track content for ${id}:`, error.message);
   }
   return { content: null, lyricsSource: null };
 };
@@ -179,7 +180,7 @@ const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, type, 
     // Try to parse response as JSON
     response = JSON.parse(cleanedContent);
   } catch (e) {
-    console.log('JSON parse error, using regex fallback:', e.message);
+    logger.error('JSON parse error, using regex fallback:', e.message);
 
     // Extract age rating with regex (looking for patterns like "13+", "All ages", etc.)
     const ageMatch = rawContent.match(/(?:All ages|\d+\+)/i);
@@ -289,17 +290,17 @@ const evaluateContentAge = async (params) => {
     throw new Error('OpenAI API not configured');
   }
 
-  console.log('Evaluating content age for:', id, type, title);
+  logger.info('Evaluating content age for:', id, type, title);
   const { content, lyricsSource } = await prepareContentForEvaluation(params);
   if (!content) {
-    console.log('No content found for evaluation, returning null');
+    logger.info('No content found for evaluation, returning null');
     return null;
   }
   try {
     const completion = await requestAgeEvaluation(content, title);
     return parseResponseAndGenerateEvaluation(completion, id, lyricsSource, type, spotifyUser);
   } catch (error) {
-    console.error('Age evaluation API error:', error.message);
+    logger.error('Age evaluation API error:', error.message);
     throw error;
   }
 };

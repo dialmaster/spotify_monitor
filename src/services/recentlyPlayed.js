@@ -3,6 +3,7 @@ const trackRepository = require('../repositories/trackRepository');
 const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
 const aiEvaluationRepository = require('../repositories/aiEvaluationRepository');
 const ageEvaluationService = require('./ageEvaluationService');
+const { logger } = require('./logService');
 
 /**
  * Checks if user is authenticated with Spotify
@@ -23,7 +24,7 @@ const getUserProfile = async () => {
     try {
       userProfile = await spotifyService.getCurrentUserProfile();
     } catch (profileError) {
-      console.error('Error fetching user profile:', profileError.message);
+      logger.error('Error fetching user profile:', profileError.message);
       throw new Error('Error fetching user profile');
     }
   }
@@ -59,7 +60,7 @@ const formatDatabaseRecords = async (dbRecords) => {
     const track = await trackRepository.findTrackById(item.spotifyTrackId);
 
     if (!track) {
-      console.log(`Track ${item.spotifyTrackId} not found in database`);
+      logger.info(`Track ${item.spotifyTrackId} not found in database`);
       return null;
     }
 
@@ -238,7 +239,7 @@ const enrichWithAiEvaluation = async (mergedHistory, userId) => {
         }
       }
     } catch (error) {
-      console.error(`Error fetching AI evaluation for track ${trackId}:`, error.message);
+      logger.error(`Error fetching AI evaluation for track ${trackId}:`, error.message);
     }
 
     // Return original item if no evaluation found or error occurred
@@ -286,10 +287,10 @@ const getRecentlyPlayed = async (limit = 25) => {
 
     return mergedHistory;
   } catch (dbError) {
-    console.error('Error retrieving recently played history from database:', dbError.message);
+    logger.error('Error retrieving recently played history from database:', dbError.message);
 
     // Fall back to Spotify API if database fails
-    console.log('getRecentlyPlayed: Falling back to Spotify API due to database error');
+    logger.info('getRecentlyPlayed: Falling back to Spotify API due to database error');
     await spotifyService.getRecentlyPlayed();
     return spotifyService.getCachedData.playHistory() || [];
   }

@@ -3,6 +3,25 @@ const path = require('path');
 const config = require('../config');
 const callMeBotService = require('./callMeBotService');
 const recentlyPlayedRepository = require('../repositories/recentlyPlayedRepository');
+const winston = require('winston');
+
+// Create Winston logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  // Just log to the console
+  transports: [
+    new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.simple()
+        )
+      })
+  ]
+});
 
 // Map to track currently playing items to avoid duplicate logging
 let trackingMap = new Map();
@@ -11,7 +30,7 @@ const ensureLogDirectoryExists = () => {
   const logDir = path.join(process.cwd(), 'logs');
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
-    console.log('Created logs directory:', logDir);
+    logger.info(`Created logs directory: ${logDir}`);
   }
 };
 
@@ -74,7 +93,7 @@ const logPlaybackStarted = (item, type) => {
 
   // Write to log file
   fs.appendFileSync(logFile, logMessage + '\n');
-  console.log(`Logged playback start to ${logFile}`);
+  logger.info(`Logged playback start to ${logFile}`);
 
   return true;
 };
@@ -122,7 +141,7 @@ const logAgeEvaluation = (item, evaluation) => {
 
   // Write to log file
   fs.appendFileSync(logFile, logMessage + '\n');
-  console.log(`Logged age evaluation to ${logFile}`);
+  logger.info(`Logged age evaluation to ${logFile}`);
 
   return true;
 };
@@ -145,7 +164,7 @@ const logAutoSkip = (item, reason = 'BLOCK rating', evaluation = null) => {
 
   // Write to log file
   fs.appendFileSync(logFile, logMessage + '\n');
-  console.log(`Logged auto-skip to ${logFile}`);
+  logger.info(`Logged auto-skip to ${logFile}`);
 
   // Send notification for blocked content that was auto-skipped
   if (reason.includes('BLOCK')) {
@@ -206,9 +225,9 @@ const sendBlockNotification = async (item, evaluation, autoSkipped) => {
 
     // Send notification
     await callMeBotService.sendSignalNotification(message);
-    console.log('Sent block notification for:', item.name);
+    logger.info('Sent block notification for:', item.name);
   } catch (error) {
-    console.error('Error sending block notification:', error.message);
+    logger.error('Error sending block notification:', error.message);
   }
 };
 
@@ -237,5 +256,6 @@ module.exports = {
   logAgeEvaluation,
   logAutoSkip,
   cleanupTracking,
-  sendBlockNotification
+  sendBlockNotification,
+  logger
 };

@@ -3,6 +3,7 @@
  */
 const sseService = require('./sseService');
 const ageEvaluationService = require('./ageEvaluationService');
+const { logger } = require('./logService');
 
 // Possible statuses:
 // WAITING: Waiting to fetch data or be authorized (frontend can just display loading spinner)
@@ -53,7 +54,7 @@ class CacheService {
             const calculatedProgress = this.currentTrack.progress + (timeLastUpdated - this.timeLastUpdated);
             // If calculatedProgress is more than 2 seconds different than track.progress, update the progress
             if (Math.abs(calculatedProgress - track.progress) > 2000) {
-                console.log('Calculated is more than 2 seconds different than track.progress, updating progress');
+                logger.info('Calculated progress is more than 2 seconds different than track.progress, updating progress');
                 this.currentTrack.progress = track.progress;
                 this.timeLastUpdated = timeLastUpdated;
 
@@ -161,7 +162,7 @@ class CacheService {
             if (clientCount > 0) {
                 const data = this.getCurrentlyPlaying();
                 const updatedCount = sseService.broadcast(data, this.timeLastUpdated);
-                console.log(`Broadcasting update to ${updatedCount}/${clientCount} connected clients (timeLastUpdated: ${this.timeLastUpdated}) with data: ${JSON.stringify(data)}`);
+                logger.info(`Broadcasting update to ${updatedCount}/${clientCount} connected clients (timeLastUpdated: ${this.timeLastUpdated}) with data: ${JSON.stringify(data)}`);
             }
         }
     }

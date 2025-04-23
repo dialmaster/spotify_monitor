@@ -2,19 +2,16 @@ const Genius = require('genius-lyrics');
 const config = require('../config');
 const browserPool = require('../utils/browserPool');
 const trackRepository = require('../repositories/trackRepository');
+const { logger } = require('./logService');
 
 // Get lyrics from Spotify web UI using Puppeteer
 const getSpotifyLyrics = async (trackUrl) => {
   try {
-    console.log(`Attempting to fetch lyrics from Spotify using Puppeteer: ${trackUrl}`);
+    logger.info(`Attempting to fetch lyrics from Spotify using Puppeteer: ${trackUrl}`);
 
     // Check if we have Spotify web cookies configured
     if (!config.spotifyWebCookies) {
-      console.log('No valid Spotify web cookies configured. To enable this feature:');
-      console.log('1. Log in to open.spotify.com in your browser');
-      console.log('2. Get cookies using browser developer tools (F12 > Console > type document.cookie)');
-      console.log('3. Add them to your config.json file');
-      console.log('Falling back to alternative lyrics sources...');
+      logger.warn('No valid Spotify web cookies configured, cannot fetch lyrics from Spotify');
       return null;
     }
 
@@ -23,7 +20,7 @@ const getSpotifyLyrics = async (trackUrl) => {
     try {
       browser = await browserPool.getBrowser();
     } catch (browserError) {
-      console.error('Failed to get browser from pool:', browserError.message);
+      logger.error('Failed to get browser from pool while fetching lyrics from Spotify:', browserError.message);
       return null;
     }
 
@@ -56,7 +53,7 @@ const getSpotifyLyrics = async (trackUrl) => {
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
       // Navigate to the Spotify track URL with reduced timeout
-      console.log('Navigating to Spotify track page...');
+      logger.info('Navigating to Spotify track page...');
       await page.goto(trackUrl, {
         waitUntil: 'domcontentloaded', // Use domcontentloaded instead of networkidle2 for faster loading
         timeout: 15000
@@ -64,25 +61,25 @@ const getSpotifyLyrics = async (trackUrl) => {
 
       // Log the current URL to see if we were redirected
       const currentUrl = page.url();
-      console.log('Current page URL:', currentUrl);
-      console.log('Waiting for lyrics container...');
+      logger.info('Current page URL:', currentUrl);
+      logger.info('Waiting for lyrics container...');
       try {
         // This will wait until the selector appears or until the timeout (8000ms) is reached, whichever comes first
         await page.waitForSelector('div[data-testid="lyrics-container"]', { timeout: 8000 });
-        console.log('Lyrics container found!');
+        logger.info('Lyrics container found!');
       } catch (e) {
-        console.log('No lyrics container found within timeout:', e.message);
+        logger.info('No lyrics container found within timeout:', e.message);
 
         // Check if we're on a login page or if the page has other expected elements
         const pageTitle = await page.title();
-        console.log('Page title:', pageTitle);
+        logger.info('Page title:', pageTitle);
 
         const hasLoginForm = await page.evaluate(() => {
           return !!document.querySelector('button[data-testid="login-button"]');
         });
 
         if (hasLoginForm) {
-          console.log('Login form detected - authentication may have failed');
+          logger.info('Login form detected - authentication may have failed');
         }
 
         // Check for other track elements to see if we're on the right page
@@ -92,24 +89,24 @@ const getSpotifyLyrics = async (trackUrl) => {
         });
 
         if (hasTrackInfo) {
-          console.log('Track info found but no lyrics - song might not have lyrics available');
+          logger.info('Track info found but no lyrics - song might not have lyrics available');
         }
 
         // If we found track info but no lyrics, the song might not have lyrics
         if (hasTrackInfo && !hasLoginForm) {
-          await page.close().catch(e => console.log('Error closing page:', e.message));
+          await page.close().catch(e => logger.error('Error closing page:', e.message));
           await browserPool.releaseBrowser();
           return null; // No lyrics available for this track
         }
 
         // If we hit the login page or found nothing familiar, auth failed
-        await page.close().catch(e => console.log('Error closing page:', e.message));
+        await page.close().catch(e => logger.error('Error closing page:', e.message));
         await browserPool.releaseBrowser();
         return null;
       }
 
       // Extract lyrics content
-      console.log('Extracting lyrics...');
+      logger.info('Extracting lyrics...');
       const lyrics = await page.evaluate(() => {
         // Get all visible lyrics lines
         const visibleLines = Array.from(
@@ -127,10 +124,10 @@ const getSpotifyLyrics = async (trackUrl) => {
 
       // Log stats
       const lineCount = lyrics.split('\n').length;
-      console.log(`Successfully extracted ${lineCount} lines of lyrics from Spotify`);
+      logger.info(`Successfully extracted ${lineCount} lines of lyrics from Spotify`);
 
       // Close the page explicitly
-      await page.close().catch(e => console.log('Error closing page:', e.message));
+      await page.close().catch(e => logger.error('Error closing page:', e.message));
 
       // Release the browser back to the pool
       await browserPool.releaseBrowser();
@@ -144,26 +141,26 @@ const getSpotifyLyrics = async (trackUrl) => {
         // Save lyrics to database if we have a track ID
         if (trackId) {
           try {
-            console.log(`Saving Spotify web lyrics to database for track ${trackId}`);
+            logger.info(`Saving Spotify web lyrics to database for track ${trackId}`);
             await trackRepository.updateTrackLyrics(trackId, lyrics, 'spotify-web');
           } catch (dbError) {
-            console.error('Error saving lyrics to database:', dbError.message);
+            logger.error('Error saving lyrics to database:', dbError.message);
             // Continue even if database save fails
           }
         }
 
         return lyrics;
       } else {
-        console.log('No lyrics content found in the container');
+        logger.info('No lyrics content found in the container');
         return null;
       }
     } catch (innerError) {
-      console.error('Error during Puppeteer operation:', innerError.message);
+      logger.error('Error during Puppeteer operation:', innerError.message);
       await browserPool.releaseBrowser();
       return null;
     }
   } catch (error) {
-    console.error('Error scraping Spotify lyrics with Puppeteer:', error.message);
+    logger.error('Error scraping Spotify lyrics with Puppeteer:', error.message);
     return null;
   }
 };
@@ -171,14 +168,14 @@ const getSpotifyLyrics = async (trackUrl) => {
 // Get podcast transcript from Spotify web UI using Puppeteer
 const getSpotifyPodcastTranscript = async (episodeUrl) => {
   try {
-    console.log(`Attempting to fetch podcast transcript from Spotify using Puppeteer: ${episodeUrl}`);
+    logger.info(`Attempting to fetch podcast transcript from Spotify using Puppeteer: ${episodeUrl}`);
 
     // Check if we have Spotify web cookies configured
     if (!config.spotifyWebCookies) {
-      console.log('No valid Spotify web cookies configured. To enable podcast transcripts:');
-      console.log('1. Log in to open.spotify.com in your browser');
-      console.log('2. Get cookies using browser developer tools (F12 > Console > type document.cookie)');
-      console.log('3. Add them to your config.json file');
+      logger.warn('No valid Spotify web cookies configured. To enable podcast transcripts:');
+      logger.warn('1. Log in to open.spotify.com in your browser');
+      logger.warn('2. Get cookies using browser developer tools (F12 > Console > type document.cookie)');
+      logger.warn('3. Add them to your config.json file');
       return null;
     }
 
@@ -187,7 +184,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
     try {
       browser = await browserPool.getBrowser();
     } catch (browserError) {
-      console.error('Failed to get browser from pool:', browserError.message);
+      logger.error('Failed to get browser from pool:', browserError.message);
       return null;
     }
 
@@ -220,7 +217,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
       // Navigate to the Spotify episode URL
-      console.log('Navigating to Spotify episode page...');
+      logger.info('Navigating to Spotify episode page...');
       await page.goto(episodeUrl, {
         waitUntil: 'networkidle2', // Need to use networkidle2 for podcast transcript pages
         timeout: 30000
@@ -228,7 +225,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
 
       // Log the current URL to see if we were redirected
       const currentUrl = page.url();
-      console.log('Current page URL:', currentUrl);
+      logger.info('Current page URL:', currentUrl);
 
       // Check if we're on a login page
       const hasLoginForm = await page.evaluate(() => {
@@ -236,8 +233,8 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
       });
 
       if (hasLoginForm) {
-        console.log('Login form detected - authentication may have failed');
-        await page.close().catch(e => console.log('Error closing page:', e.message));
+        logger.info('Login form detected - authentication may have failed');
+        await page.close().catch(e => logger.error('Error closing page:', e.message));
         await browserPool.releaseBrowser();
         return null;
       }
@@ -267,7 +264,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
               // Check each element in the collection
               for (const el of elements) {
                 if (hasTranscriptText(el)) {
-                  console.log(`Found transcript link with selector: ${selector}`);
+                  logger.info(`Found transcript link with selector: ${selector}`);
                   return { found: true, selector };
                 }
               }
@@ -281,7 +278,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
         const allElements = document.querySelectorAll('a, button, div[role="button"]');
         for (const el of allElements) {
           if (hasTranscriptText(el)) {
-            console.log(`Found transcript link with general approach: ${el.textContent}`);
+            logger.info(`Found transcript link with general approach: ${el.textContent}`);
             return { found: true, general: true };
           }
         }
@@ -289,16 +286,16 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
         return { found: false };
       });
 
-      console.log('Transcript link detection result:', hasTranscriptLink);
+      logger.info('Transcript link detection result:', hasTranscriptLink);
 
       if (!hasTranscriptLink.found) {
-          console.log('No transcript link or content found - this podcast may not have a transcript');
-          await page.close().catch(e => console.log('Error closing page:', e.message));
+          logger.info('No transcript link or content found - this podcast may not have a transcript');
+          await page.close().catch(e => logger.error('Error closing page:', e.message));
           await browserPool.releaseBrowser();
           return null;
       } else {
         // If we found a transcript link/tab, click it
-        console.log('Clicking on Transcript tab...');
+        logger.info('Clicking on Transcript tab...');
         await page.evaluate(() => {
           // Helper function to find transcript element
           function findTranscriptElement() {
@@ -344,7 +341,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
       }
 
       // Try to find transcript content - check multiple potential containers
-      console.log('Looking for transcript content...');
+      logger.info('Looking for transcript content...');
       const transcript = await page.evaluate(() => {
         // Try various selectors that might contain transcript content
         const possibleContainers = [
@@ -426,7 +423,7 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
       // Log stats and limit to 10000 characters
       if (transcript) {
         const lineCount = transcript.split('\n').length;
-        console.log(`Successfully extracted transcript (${lineCount} lines, ${transcript.length} chars)`);
+        logger.info(`Successfully extracted transcript (${lineCount} lines, ${transcript.length} chars)`);
 
         // Extract the episode ID from the URL
         const episodeIdMatch = episodeUrl.match(/episode\/([a-zA-Z0-9]+)/);
@@ -435,30 +432,30 @@ const getSpotifyPodcastTranscript = async (episodeUrl) => {
         // Save transcript to database if we have an episode ID
         if (episodeId) {
           try {
-            console.log(`Saving podcast transcript to database for episode ${episodeId}`);
+            logger.info(`Saving podcast transcript to database for episode ${episodeId}`);
             await trackRepository.updateTrackLyrics(episodeId, transcript, 'spotify-transcript');
           } catch (dbError) {
-            console.error('Error saving transcript to database:', dbError.message);
+            logger.error('Error saving transcript to database:', dbError.message);
             // Continue even if database save fails
           }
         }
 
-        await page.close().catch(e => console.log('Error closing page:', e.message));
+        await page.close().catch(e => logger.error('Error closing page:', e.message));
         await browserPool.releaseBrowser();
         return transcript;
       } else {
-        console.log('No transcript content found');
-        await page.close().catch(e => console.log('Error closing page:', e.message));
+        logger.info('No transcript content found');
+        await page.close().catch(e => logger.error('Error closing page:', e.message));
         await browserPool.releaseBrowser();
         return null;
       }
     } catch (innerError) {
-      console.error('Error during Puppeteer operation:', innerError.message);
+      logger.error('Error during Puppeteer operation:', innerError.message);
       await browserPool.releaseBrowser();
       return null;
     }
   } catch (error) {
-    console.error('Error scraping podcast transcript with Puppeteer:', error.message);
+    logger.error('Error scraping podcast transcript with Puppeteer:', error.message);
     return null;
   }
 };
@@ -474,18 +471,18 @@ const getGeniusLyrics = async (title, artist, trackId = null) => {
 
     // If no results found
     if (!searches || searches.length === 0) {
-      console.log('No lyrics found in Genius');
+      logger.info('No lyrics found in Genius');
       return null;
     }
 
     // Get the first search result
     const song = searches[0];
-    console.log(`Found song: ${song.title} by ${song.artist.name}`);
+    logger.info(`Found song: ${song.title} by ${song.artist.name}`);
 
     // Fetch the lyrics
     const lyrics = await song.lyrics();
 
-    console.log('Successfully fetched lyrics from Genius');
+    logger.info('Successfully fetched lyrics from Genius');
 
     // Create response with lyrics data
     const lyricsData = {
@@ -502,16 +499,16 @@ const getGeniusLyrics = async (title, artist, trackId = null) => {
       try {
         await trackRepository.updateTrackLyrics(trackId, lyrics, 'genius');
       } catch (dbError) {
-        console.error('Error saving Genius lyrics to database:', dbError.message);
+        logger.error('Error saving Genius lyrics to database:', dbError.message);
         // Continue even if database save fails
       }
     } else {
-      console.log('No trackId provided, skipping database update for Genius lyrics');
+      logger.info('No trackId provided, skipping database update for Genius lyrics');
     }
 
     return lyricsData;
   } catch (error) {
-    console.error('Genius search/lyrics error:', error.message);
+    logger.error('Genius search/lyrics error:', error.message);
     return null;
   }
 };

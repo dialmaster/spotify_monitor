@@ -7,6 +7,7 @@ const browserPool = require('./utils/browserPool');
 const dbService = require('./services/dbService');
 const spotifyService = require('./services/spotifyService');
 const monitoringDaemon = require('./services/monitoringDaemon');
+const { logger } = require('./services/logService');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -42,17 +43,17 @@ app.use('/api', apiRoutes);
 
 // Start the server
 const server = app.listen(config.port, '0.0.0.0', async () => {
-  console.log(`Server running at http://localhost:${config.port}`);
-  console.log(`Using config file: ${config.getConfigPath()}`);
-  console.log(`Genius API key configured: ${config.hasGeniusLyrics() ? 'Yes' : 'No (lyrics functionality may be limited)'}`);
-  console.log(`OpenAI API key configured: ${config.hasAgeEvaluation() ? 'Yes' : 'No (age evaluation disabled)'}`);
-  console.log(`Spotify Web cookies configured: ${config.hasSpotifyWebAccess() ? 'Yes' : 'No (Spotify lyrics/transcripts disabled)'}`);
-  console.log(`Age evaluation configured for listener age: ${config.ageEvaluation.listenerAge}`);
-  console.log(`Auto-skip blocked content: ${config.autoSkipBlocked ? 'Yes' : 'No'}`);
+  logger.info(`Server running at http://localhost:${config.port}`);
+  logger.info(`Using config file: ${config.getConfigPath()}`);
+  logger.info(`Genius API key configured: ${config.hasGeniusLyrics() ? 'Yes' : 'No (lyrics functionality may be limited)'}`);
+  logger.info(`OpenAI API key configured: ${config.hasAgeEvaluation() ? 'Yes' : 'No (age evaluation disabled)'}`);
+  logger.info(`Spotify Web cookies configured: ${config.hasSpotifyWebAccess() ? 'Yes' : 'No (Spotify lyrics/transcripts disabled)'}`);
+  logger.info(`Age evaluation configured for listener age: ${config.ageEvaluation.listenerAge}`);
+  logger.info(`Auto-skip blocked content: ${config.autoSkipBlocked ? 'Yes' : 'No'}`);
   if (config.ageEvaluation.customInstructions) {
-    console.log(`Custom age evaluation instructions: "${config.ageEvaluation.customInstructions}"`);
+    logger.info(`Custom age evaluation instructions: "${config.ageEvaluation.customInstructions}"`);
   }
-  console.log(`To authorize Spotify, open http://localhost:${config.port} in your browser`);
+  logger.info(`To authorize Spotify, open http://localhost:${config.port} in your browser`);
 
   // Initialize database connection and run migrations
   try {
@@ -62,51 +63,51 @@ const server = app.listen(config.port, '0.0.0.0', async () => {
     const maxRetries = 5;
 
     while (!dbConnected && retryCount < maxRetries) {
-      console.log(`Database connection attempt ${retryCount + 1}/${maxRetries}...`);
+      logger.info(`Database connection attempt ${retryCount + 1}/${maxRetries}...`);
 
       try {
         await dbService.initializeDb();
-        console.log('Database initialized with Sequelize models');
+        logger.info('Database initialized with Sequelize models');
 
         dbConnected = await dbService.testConnection();
-        console.log(`Database connection: ${dbConnected ? 'Successful' : 'Failed'}`);
+        logger.info(`Database connection: ${dbConnected ? 'Successful' : 'Failed'}`);
 
         if (dbConnected) {
-          console.log('Initializing Spotify service...');
+          logger.info('Initializing Spotify service...');
           try {
             const spotifyInitialized = await spotifyService.initialize();
             if (spotifyInitialized) {
-              console.log('Successfully initialized Spotify service with saved tokens');
+              logger.info('Successfully initialized Spotify service with saved tokens');
               monitoringDaemon.start();
             } else {
-              console.log('No valid Spotify tokens found, please authenticate via the web interface');
+              logger.info('No valid Spotify tokens found, please authenticate via the web interface');
             }
           } catch (spotifyError) {
-            console.error('Error initializing Spotify service:', spotifyError.message);
+            logger.error('Error initializing Spotify service:', spotifyError.message);
           }
         } else {
           retryCount++;
           if (retryCount < maxRetries) {
-            console.log(`Waiting before retry ${retryCount}/${maxRetries}...`);
+            logger.info(`Waiting before retry ${retryCount}/${maxRetries}...`);
             await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
           }
         }
       } catch (initError) {
-        console.error('Error initializing database:', initError);
+        logger.error('Error initializing database:', initError);
         retryCount++;
         if (retryCount < maxRetries) {
-          console.log(`Waiting before retry ${retryCount}/${maxRetries}...`);
+          logger.info(`Waiting before retry ${retryCount}/${maxRetries}...`);
           await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
         }
       }
     }
 
     if (!dbConnected) {
-      console.error('Failed to connect to the database after maximum retry attempts. Exiting application.');
+      logger.error('Failed to connect to the database after maximum retry attempts. Exiting application.');
       process.exit(1);
     }
   } catch (error) {
-    console.error('Fatal error during application startup:', error);
+    logger.error('Fatal error during application startup:', error);
     process.exit(1);
   }
 
@@ -117,16 +118,16 @@ const server = app.listen(config.port, '0.0.0.0', async () => {
   if (config.hasSpotifyWebAccess()) {
     browserPool.preloadBrowser();
   } else {
-    console.log('Skipping Puppeteer preload as no Spotify web cookies are configured');
+    logger.info('Skipping Puppeteer preload as no Spotify web cookies are configured');
   }
 });
 
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  logger.info('SIGTERM received, shutting down gracefully');
   await dbService.closePool();
   server.close(() => {
-    console.log('Server closed');
+    logger.info('Server closed');
     process.exit(0);
   });
 });

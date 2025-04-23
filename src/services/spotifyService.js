@@ -3,6 +3,7 @@ const querystring = require('querystring');
 const config = require('../config');
 const trackRepository = require('../repositories/trackRepository');
 const spotifyAuthRepository = require('../repositories/spotifyAuthRepository');
+const { logger } = require('./logService');
 
 // Helper function to generate a random string for state
 const generateRandomString = (length) => {
@@ -37,21 +38,21 @@ let lastHistoryFetch = 0;
 const loadTokensFromDatabase = async () => {
   try {
     const userTokens = await spotifyAuthRepository.getTokens(config.clientId);
-    console.log('Found user tokens for clientId', config.clientId, JSON.stringify(userTokens));
+    logger.info('Found user tokens for clientId', config.clientId, JSON.stringify(userTokens));
 
     if (userTokens) {
       tokenInfo.access_token = userTokens.accessToken;
       tokenInfo.refresh_token = userTokens.refreshToken;
       tokenInfo.expires_at = userTokens.expiresAt ? new Date(userTokens.expiresAt).getTime() : null;
 
-      console.log(`Loaded tokens for clientId ${userTokens.clientId} from database`);
+      logger.info(`Loaded tokens for clientId ${userTokens.clientId} from database`);
       return true;
     } else {
-      console.log('No tokens found in database');
+      logger.info('No tokens found in database');
       return false;
     }
   } catch (error) {
-    console.error('Error loading tokens from database:', error.message);
+    logger.error('Error loading tokens from database:', error.message);
     return false;
   }
 };
@@ -66,75 +67,93 @@ const saveTokensToDatabase = async () => {
       expiresAt: tokenInfo.expires_at ? new Date(tokenInfo.expires_at) : null
     });
 
-    console.log(`Saved tokens for clientId ${config.clientId} to database`);
+    logger.info(`Saved tokens for clientId ${config.clientId} to database`);
     return true;
   } catch (error) {
-    console.error('Error saving tokens to database:', error.message);
+    logger.error('Error saving tokens to database:', error.message);
     return false;
   }
 };
 
+// Consider expired if the token is less than 2 minutes from expiration
 const isTokenExpired = () => {
-  return !tokenInfo.expires_at || Date.now() > tokenInfo.expires_at;
+  return !tokenInfo.expires_at || Date.now() > tokenInfo.expires_at - (2 * 60 * 1000);
 };
 
 const refreshAccessToken = async () => {
   if (!tokenInfo.refresh_token) {
-    console.error('No refresh token available. Please authorize again.');
+    logger.error('No refresh token available. Please authorize again.');
     return false;
   }
 
-  try {
-    const response = await axios({
-      method: 'post',
-      url: 'https://accounts.spotify.com/api/token',
-      params: {
-        grant_type: 'refresh_token',
-        refresh_token: tokenInfo.refresh_token
-      },
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(config.clientId + ':' + config.clientSecret).toString('base64'),
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    });
+  logger.info('Refreshing access token...');
 
-    const data = response.data;
-    tokenInfo.access_token = data.access_token;
-    tokenInfo.expires_at = Date.now() + (data.expires_in * 1000);
+  const MAX_RETRIES = 3;
+  let retryCount = 0;
 
-    if (data.refresh_token) {
-      tokenInfo.refresh_token = data.refresh_token;
-    }
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+  while (retryCount < MAX_RETRIES) {
     try {
-      if (userInfo.id) {
-        await saveTokensToDatabase();
-      } else {
-        try {
-          await getCurrentUserProfile();
-        } catch (profileError) {
-          console.error('Could not fetch user profile to get user ID:', profileError.message);
-          // We'll continue even without saving to database
+      const response = await axios({
+        method: 'post',
+        url: 'https://accounts.spotify.com/api/token',
+        params: {
+          grant_type: 'refresh_token',
+          refresh_token: tokenInfo.refresh_token
+        },
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(config.clientId + ':' + config.clientSecret).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded'
         }
-      }
-    } catch (dbError) {
-      console.error('Failed to save tokens to database:', dbError.message);
-      // Continue even if database save fails - we still have valid tokens in memory
-    }
-
-    return true;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Token refresh error:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
       });
-    } else {
-      console.error('Unexpected error during token refresh:', error.message);
+
+      const data = response.data;
+      tokenInfo.access_token = data.access_token;
+      tokenInfo.expires_at = Date.now() + (data.expires_in * 1000);
+
+      if (data.refresh_token) {
+        tokenInfo.refresh_token = data.refresh_token;
+      }
+
+      try {
+        if (userInfo.id) {
+          await saveTokensToDatabase();
+        } else {
+          try {
+            await getCurrentUserProfile();
+          } catch (profileError) {
+            logger.error('Could not fetch user profile to get user ID:', profileError.message);
+            // We'll continue even without saving to database
+          }
+        }
+      } catch (dbError) {
+        logger.error('Failed to save tokens to database:', dbError.message);
+        // Continue even if database save fails - we still have valid tokens in memory
+      }
+
+      return true;
+    } catch (error) {
+      retryCount++;
+      if (axios.isAxiosError(error)) {
+        logger.error(`Token refresh error (attempt ${retryCount}/${MAX_RETRIES}):`, {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data
+        });
+      } else {
+        logger.error(`Unexpected error during token refresh (attempt ${retryCount}/${MAX_RETRIES}):`, error.message);
+      }
+
+      if (retryCount < MAX_RETRIES) {
+        logger.info(`Waiting 5 seconds before retry attempt ${retryCount + 1}...`);
+        await delay(5000);
+      }
     }
-    return false;
   }
+
+  logger.error(`Failed to refresh token after ${MAX_RETRIES} attempts`);
+  return false;
 };
 
 const getCurrentUserProfile = async () => {
@@ -144,7 +163,7 @@ const getCurrentUserProfile = async () => {
 
   try {
     if (isTokenExpired()) {
-      console.log('Token expired, attempting to refresh before fetching user profile...');
+      logger.info('Token expired, attempting to refresh before fetching user profile...');
       const refreshed = await refreshAccessToken();
       if (!refreshed) {
         throw new Error('Failed to refresh access token');
@@ -155,7 +174,7 @@ const getCurrentUserProfile = async () => {
       throw new Error('No access token available. Please authorize first.');
     }
 
-    console.log('Fetching user profile information...');
+    logger.info('Fetching user profile information...');
     const response = await axios({
       method: 'get',
       url: 'https://api.spotify.com/v1/me',
@@ -171,12 +190,12 @@ const getCurrentUserProfile = async () => {
     userInfo.explicit_content = response.data.explicit_content;
     userInfo.fetched = true;
 
-    console.log('User profile fetched successfully:');
-    console.log(`- User ID: ${userInfo.id}`);
-    console.log(`- Display Name: ${userInfo.display_name}`);
-    console.log(`- Email: ${userInfo.email}`);
-    console.log(`- Explicit Content Filter Enabled: ${userInfo.explicit_content?.filter_enabled}`);
-    console.log(`- Explicit Content Filter Locked: ${userInfo.explicit_content?.filter_locked}`);
+    logger.info('User profile fetched successfully:');
+    logger.info(`- User ID: ${userInfo.id}`);
+    logger.info(`- Display Name: ${userInfo.display_name}`);
+    logger.info(`- Email: ${userInfo.email}`);
+    logger.info(`- Explicit Content Filter Enabled: ${userInfo.explicit_content?.filter_enabled}`);
+    logger.info(`- Explicit Content Filter Locked: ${userInfo.explicit_content?.filter_locked}`);
 
     // Save tokens to database now that we have a user ID
     await saveTokensToDatabase();
@@ -184,13 +203,13 @@ const getCurrentUserProfile = async () => {
     return userInfo;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error('Spotify API Error (User Profile):', {
+      logger.error('Spotify API Error (User Profile):', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message
       });
     } else {
-      console.error('Error in getCurrentUserProfile:', error.message);
+      logger.error('Error in getCurrentUserProfile:', error.message);
     }
     throw error;
   }
@@ -221,13 +240,13 @@ const exchangeCodeForToken = async (code) => {
     try {
       await getCurrentUserProfile();
     } catch (profileError) {
-      console.error('Error fetching user profile:', profileError.message);
+      logger.error('Error fetching user profile:', profileError.message);
       // Continue even if profile fetch fails
     }
 
     return true;
   } catch (error) {
-    console.error('Error during token exchange:', error.response ? error.response.data : error.message);
+    logger.error('Error during token exchange:', error.response ? error.response.data : error.message);
     return false;
   }
 };
@@ -236,12 +255,12 @@ const exchangeCodeForToken = async (code) => {
 const getCurrentlyPlaying = async () => {
   try {
     if (isTokenExpired()) {
-      console.log('Token expired, attempting to refresh...');
+      logger.info('Token expired, attempting to refresh...');
       const refreshed = await refreshAccessToken();
       if (!refreshed) {
         throw new Error('Failed to refresh access token');
       }
-      console.log('Token refreshed successfully');
+      logger.info('Token refreshed successfully');
     }
 
     if (!tokenInfo.access_token) {
@@ -261,7 +280,7 @@ const getCurrentlyPlaying = async () => {
 
     // If no content (204), nothing is playing
     if (response.status === 204) {
-      console.log('Received 204 status - nothing playing');
+      logger.info('Received 204 status - nothing playing');
       currentPlayback = { playing: false };
       return { playing: false };
     }
@@ -310,11 +329,11 @@ const getCurrentlyPlaying = async () => {
 
         const result = await trackRepository.saveTrack(trackData);
         if (result.created) {
-          console.log(`New ${playbackData.type} saved to database with ID: ${trackData.trackId}`);
+          logger.info(`New ${playbackData.type} saved to database with ID: ${trackData.trackId}`);
         }
       } catch (dbError) {
-        console.error('Error saving track to database:', dbError.message);
-        console.error('Database error details:', dbError);
+        logger.error('Error saving track to database:', dbError.message);
+        logger.error('Database error details:', dbError);
         // Continue execution even if database save fails
       }
     }
@@ -322,13 +341,13 @@ const getCurrentlyPlaying = async () => {
     return playbackData;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error('Spotify API Error:', {
+      logger.error('Spotify API Error:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message
       });
     } else {
-      console.error('Error in getCurrentlyPlaying:', error.message);
+      logger.error('Error in getCurrentlyPlaying:', error.message);
     }
     throw error;
   }
@@ -348,7 +367,7 @@ const getRecentlyPlayed = async () => {
       throw new Error('No access token available. Please authorize first.');
     }
 
-    console.log('Fetching recently played tracks...');
+    logger.info('Fetching recently played tracks...');
     const response = await axios({
       method: 'get',
       url: 'https://api.spotify.com/v1/me/player/recently-played',
@@ -367,13 +386,13 @@ const getRecentlyPlayed = async () => {
     return playHistory;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error('Spotify API Error (Recently Played):', {
+      logger.error('Spotify API Error (Recently Played):', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message
       });
     } else {
-      console.error('Error in getRecentlyPlayed:', error.message);
+      logger.error('Error in getRecentlyPlayed:', error.message);
     }
     throw error;
   }
@@ -382,7 +401,7 @@ const getRecentlyPlayed = async () => {
 // Skip to the next track
 const skipToNextTrack = async () => {
   try {
-    console.log('Attempting to skip to next track due to age restriction...');
+    logger.info('Attempting to skip to next track due to age restriction...');
 
     if (isTokenExpired()) {
       const refreshed = await refreshAccessToken();
@@ -406,21 +425,21 @@ const skipToNextTrack = async () => {
 
     // Status 204 means success with no content, 200 is also a success
     if (response.status === 204 || response.status === 200) {
-      console.log('Successfully skipped to next track');
+      logger.info('Successfully skipped to next track');
       return true;
     } else {
-      console.error('Unexpected response from Spotify skip API:', response.status, response.statusText);
+      logger.error('Unexpected response from Spotify skip API:', response.status, response.statusText);
       return false;
     }
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error('Spotify API Error (Skip Track):', {
+      logger.error('Spotify API Error (Skip Track):', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message
       });
     } else {
-      console.error('Error in skipToNextTrack:', error.message);
+      logger.error('Error in skipToNextTrack:', error.message);
     }
     return false;
   }
@@ -429,26 +448,26 @@ const skipToNextTrack = async () => {
 
 // Initialize the Spotify service - load tokens and start monitoring if available
 const initialize = async () => {
-  console.log('Initializing Spotify service...');
+  logger.info('Initializing Spotify service...');
   const tokensLoaded = await loadTokensFromDatabase();
 
   if (tokensLoaded) {
-    console.log('Found saved tokens, attempting to refresh if needed...');
+    logger.info('Found saved tokens, attempting to refresh if needed...');
     if (isTokenExpired()) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
-        console.log('Successfully refreshed token from saved refresh token');
+        logger.info('Successfully refreshed token from saved refresh token');
         return true;
       } else {
-        console.log('Failed to refresh token, user will need to re-authenticate');
+        logger.info('Failed to refresh token, user will need to re-authenticate');
         return false;
       }
     } else {
-      console.log('Saved token is still valid');
+      logger.info('Saved token is still valid');
       return true;
     }
   } else {
-    console.log('No saved tokens found, user will need to authenticate');
+    logger.info('No saved tokens found, user will need to authenticate');
     return false;
   }
 };

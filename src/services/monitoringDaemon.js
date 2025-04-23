@@ -15,30 +15,31 @@ const cacheService = require('./cacheService');
 const statusTypes = require('../types/statusTypes');
 const trackRepository = require('../repositories/trackRepository');
 const sseService = require('./sseService');
+const { logger } = require('./logService');
 
 class MonitoringDaemon {
     constructor() {
         this.isRunning = false;
         this.isFetchingCurrentlyPlaying = false;
-        this.monitorInterval = 2000; // 15 checks per 30 seconds should be fine
+        this.monitorInterval = 3000;
         this.cacheService = cacheService;
         this.intervalId = null;
     }
 
     async start() {
-        console.log('Starting monitoring daemon');
+        logger.info('Starting monitoring daemon');
         if (this.isRunning) {
-            console.log('Monitoring daemon already running');
+            logger.info('Monitoring daemon already running');
             return;
         }
 
         const authorized = await spotifyService.initialize();
         if (!authorized) {
             this.cacheService.setStatus(statusTypes.UNAUTHORIZED);
-            console.log('Monitoring daemon not authorized');
+            logger.warn('Monitoring daemon not authorized');
             return;
         }
-        console.log('Monitoring daemon authorized');
+        logger.info('Monitoring daemon authorized');
         this.cacheService.setStatus(statusTypes.AUTHORIZED);
         this.isRunning = true;
         this.fetchCurrentlyPlaying();
@@ -46,9 +47,9 @@ class MonitoringDaemon {
     }
 
     async stop() {
-        console.log('Stopping monitoring daemon');
+        logger.info('Stopping monitoring daemon');
         if (!this.isRunning) {
-            console.log('Monitoring daemon not running');
+            logger.info('Monitoring daemon not running');
             return;
         }
 
@@ -65,7 +66,7 @@ class MonitoringDaemon {
 
         this.isRunning = false;
         this.cacheService.setStatus(statusTypes.STOPPED);
-        console.log('Monitoring daemon stopped');
+        logger.info('Monitoring daemon stopped');
     }
 
     async fetchCurrentlyPlaying() {
@@ -195,7 +196,7 @@ class MonitoringDaemon {
             url: null,
             sourceDetail: null
         };
-        console.log('Monitoring daemon: fetchLyrics(): Fetching lyrics for ' + title + ' by ' + artist);
+        logger.info('Monitoring daemon: fetchLyrics(): Fetching lyrics for ' + title + ' by ' + artist);
 
         if (cachedLyrics && cachedLyrics.error) {
             return cachedLyrics;
@@ -229,7 +230,7 @@ class MonitoringDaemon {
                     return result;
                   }
                 } catch (dbError) {
-                  console.error('Monitoring daemon: fetchLyrics(): Error checking database for transcript:', dbError.message);
+                  logger.error('Monitoring daemon: fetchLyrics(): Error checking database for transcript:', dbError.message);
                 }
               } // End of episode DB check
 
@@ -280,7 +281,7 @@ class MonitoringDaemon {
                   return result;
                 }
               } catch (dbError) {
-                console.error('Error checking database for lyrics:', dbError.message);
+                logger.warn('Error checking database for lyrics, checking other sources:', dbError.message);
                 // Continue to fetch lyrics from other sources if database check fails
               }
             }
@@ -301,7 +302,7 @@ class MonitoringDaemon {
                 result.sourceDetail = 'Official lyrics from Spotify web player';
                 return result;
               } else {
-                console.log('Could not fetch lyrics from Spotify web page, falling back to Genius');
+                logger.warn('Could not fetch lyrics from Spotify web page, falling back to Genius');
               }
             }
 
@@ -316,13 +317,13 @@ class MonitoringDaemon {
               result.sourceDetail = 'Official lyrics from Genius';
               return result;
             } else {
-              console.log('No lyrics found');
+              logger.warn('No lyrics found in Genius');
               result.error = 'Could not find lyrics. Consider configuring Genius API key or Spotify cookies for better results.';
               result.suggestion = 'See config.json.example for setup instructions';
               return result;
             }
           } catch (error) {
-            console.error('Lyrics API error:', error.message);
+            logger.error('Lyrics GeniusAPI error:', error.message);
             result.error = 'Error fetching lyrics';
             return result;
           }
@@ -331,7 +332,7 @@ class MonitoringDaemon {
     async fetchAgeEvaluation() {
         const { id, contentType, title, spotifyUrl } = this.cacheService.getCurrentTrack();
         // This needs to do what the /age-evaluation route does
-        console.log('Monitoring daemon: Fetching age evaluation');
+        logger.info('Monitoring daemon: Fetching age evaluation');
         // Basic validation
         const result = {
             error: null,
@@ -353,10 +354,10 @@ class MonitoringDaemon {
                 title
             });
             result.evaluation = evaluation;
-            console.log('Monitoring daemon: fetchAgeEvaluation(): Age evaluation: ' + JSON.stringify(evaluation));
+            logger.info('Monitoring daemon: fetchAgeEvaluation(): Age evaluation: ' + JSON.stringify(evaluation));
             return result;
         } catch (error) {
-            console.error('Monitoring daemon: fetchAgeEvaluation(): Error evaluating age evaluation:', error.message);
+            logger.error('Monitoring daemon: fetchAgeEvaluation(): Error evaluating age evaluation:', error.message);
             result.error = 'Error evaluating age evaluation';
             return result;
         }
@@ -367,12 +368,12 @@ class MonitoringDaemon {
         const ageEvaluation = this.cacheService.getCurrentAgeEvaluation();
 
         if (!currentTrack || !ageEvaluation || !ageEvaluation.evaluation) {
-            console.log('Monitoring daemon: checkAndSkipBlockedContent(): No current track or age evaluation, skipping block checking');
+            logger.info('Monitoring daemon: checkAndSkipBlockedContent(): No current track or age evaluation, skipping block checking');
             return;
         }
 
         if (ageEvaluation.evaluation.level === 'BLOCK') {
-            console.log('Monitoring daemon: checkAndSkipBlockedContent(): Blocked content, skipping to next track');
+            logger.info('Monitoring daemon: checkAndSkipBlockedContent(): Blocked content, skipping to next track');
             spotifyService.skipToNextTrack();
             logService.logAutoSkip(currentTrack, 'BLOCK rating', ageEvaluation);
         }

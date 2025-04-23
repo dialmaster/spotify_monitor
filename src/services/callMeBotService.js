@@ -1,5 +1,6 @@
 const config = require('../config');
 const axios = require('axios');
+const { logger } = require('./logService');
 
 async function sendSignalNotification(message) {
   if (!config.callMeBotUrl) {
@@ -15,10 +16,10 @@ async function sendSignalNotification(message) {
 
   try {
     const response = await axios.get(url);
-    console.log('Notification sent:', response.data);
+    logger.info('Notification sent:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error sending notification:', error.message);
+    logger.error('Error sending notification:', error.message);
     throw error;
   }
 }

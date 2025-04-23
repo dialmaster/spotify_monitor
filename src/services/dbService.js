@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 const config = require('../config');
 const models = require('../models');
 const migrationRunner = require('../utils/migrationRunner');
+const { logger } = require('./logService');
 
 let pool = null;
 
@@ -18,7 +19,7 @@ async function initializeDb() {
   // Since we're always in Docker, use the service name directly
   const host = process.env.POSTGRES_HOST || 'spotify-shared-db';
 
-  console.log(`Initializing database connection to ${host}`);
+  logger.info(`Initializing database connection to ${host}`);
 
   // Create a new pool using configuration from environment variables or defaults
   pool = new Pool({
@@ -29,27 +30,27 @@ async function initializeDb() {
     port: parseInt(process.env.POSTGRES_PORT || '5432'),
   });
 
-  console.log(`Database config: connecting to ${host}:${process.env.POSTGRES_PORT || '5432'}`);
+  logger.info(`Database config: connecting to ${host}:${process.env.POSTGRES_PORT || '5432'}`);
 
   // Add error handler to prevent app crashes on connection issues
   pool.on('error', (err) => {
-    console.error('Unexpected error on idle database client', err);
+    logger.error('Unexpected error on idle database client', err);
   });
 
   try {
     // Connect to database using Sequelize
     await models.sequelize.authenticate();
-    console.log('Sequelize connection has been established successfully.');
+    logger.info('Sequelize connection has been established successfully.');
 
     // Run migrations
     const migrationSuccess = await migrationRunner.runMigrations();
     if (!migrationSuccess) {
-      console.warn('Some migrations failed to run, but the application will continue.');
+      logger.warn('Some migrations failed to run, but the application will continue.');
     }
 
     return { pool, models };
   } catch (error) {
-    console.error('Unable to connect to the database or run migrations:', error);
+    logger.error('Unable to connect to the database or run migrations:', error);
     throw error;
   }
 }
@@ -87,7 +88,7 @@ async function testConnection() {
 
     return true;
   } catch (error) {
-    console.error('Database connection test failed:', error);
+    logger.error('Database connection test failed:', error);
     return false;
   }
 }
@@ -105,7 +106,7 @@ async function closePool() {
   // Close Sequelize connection as well
   if (models.sequelize) {
     await models.sequelize.close();
-    console.log('Sequelize connection closed');
+    logger.info('Sequelize connection closed');
   }
 }
 
