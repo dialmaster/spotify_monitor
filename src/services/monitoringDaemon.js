@@ -95,8 +95,8 @@ class MonitoringDaemon {
         if ((previousStateTrack && previousStateTrack.id !== currentlyPlayingTrack.id) || !previousStateTrack) {
             const spotifyUserProfile = await spotifyService.getCurrentUserProfile();
             currentlyPlayingTrack.rawItem.spotifyUserId = spotifyUserProfile.id;
-            logService.logPlaybackStarted(currentlyPlayingTrack.rawItem, currentlyPlayingTrack.contentType);
             this.cacheService.setCurrentTrack(currentlyPlayingTrack);
+            logService.logPlaybackStarted(currentlyPlayingTrack.rawItem, currentlyPlayingTrack.contentType);
         }
 
         // If it's the same track, just set the track so we can update the progress
