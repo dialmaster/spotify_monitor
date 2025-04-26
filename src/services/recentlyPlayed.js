@@ -189,17 +189,26 @@ const enrichWithAiEvaluation = async (mergedHistory, userId) => {
         lyrics = trackData.lyrics.substring(0, 5000);
       }
 
-      // If we have lyrics, but we do NOT have an AI evaluation, get it from the age evaluation service
-      // And then populate it in the DB
-      if (!evaluation && trackData) {
-        // Note that this will populate it in the DB...
+      // Check if we need to re-evaluate because we have a LOW confidence evaluation but lyrics are available
+      const shouldReEvaluate = evaluation &&
+                               evaluation.confidenceLevel === 'LOW' &&
+                               trackData &&
+                               trackData.lyrics;
+
+      // If we should re-evaluate or we don't have an evaluation yet but we have track data
+      if (shouldReEvaluate || (!evaluation && trackData)) {
+        if (shouldReEvaluate) {
+          logger.info(`Re-evaluating age rating for track ${trackId} since we have lyrics but current confidence is LOW`);
+        }
+
+        // Force a re-evaluation if we have LOW confidence but lyrics are available
         evaluation = await ageEvaluationService.evaluateContentAge({
           id: trackId,
-          type: 'track',
-          title: title
+          type: trackData.type || 'track',
+          title: title,
+          forceReEvaluation: shouldReEvaluate
         });
       }
-
 
       if (evaluation) {
         // Add AI evaluation data to the item

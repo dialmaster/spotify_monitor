@@ -112,13 +112,26 @@ class MonitoringDaemon {
         }
 
         const currentAgeEvaluation = this.cacheService.getCurrentAgeEvaluation();
-        if (!currentAgeEvaluation || (!currentAgeEvaluation.error && !currentAgeEvaluation.evaluation)) {
+        // Check if we need to re-evaluate because we have lyrics but the confidence is LOW
+        const currentLyrics = this.cacheService.getCurrentLyrics();
+        const shouldReEvaluate = currentAgeEvaluation &&
+                                currentAgeEvaluation.evaluation &&
+                                currentAgeEvaluation.evaluation.confidence &&
+                                currentAgeEvaluation.evaluation.confidence.level === 'LOW' &&
+                                currentLyrics &&
+                                currentLyrics.lyrics &&
+                                !currentLyrics.error;
+
+        if (!currentAgeEvaluation || (!currentAgeEvaluation.error && !currentAgeEvaluation.evaluation) || shouldReEvaluate) {
             if (ageEvaluationService.isAgeEvaluationAvailable()) {
                 this.cacheService.setCurrentAgeEvaluation({
                     currentlyFetching: true,
                 });
             }
-            const ageEvaluationResult = await this.fetchAgeEvaluation();
+            if (shouldReEvaluate) {
+                logger.info('Re-evaluating age rating since we now have lyrics but current confidence is LOW');
+            }
+            const ageEvaluationResult = await this.fetchAgeEvaluation(shouldReEvaluate);
             // TODO: Log the age evaluation?
             // logService.logAgeEvaluation(item, ageEvaluationResult);
             this.cacheService.setCurrentAgeEvaluation(ageEvaluationResult);
@@ -329,7 +342,7 @@ class MonitoringDaemon {
           }
     }
 
-    async fetchAgeEvaluation() {
+    async fetchAgeEvaluation(forceReEvaluation = false) {
         const { id, contentType, title, spotifyUrl } = this.cacheService.getCurrentTrack();
         // This needs to do what the /age-evaluation route does
         logger.info('Monitoring daemon: Fetching age evaluation');
@@ -351,7 +364,8 @@ class MonitoringDaemon {
             const evaluation = await ageEvaluationService.evaluateContentAge({
                 id,
                 type: contentType,
-                title
+                title,
+                forceReEvaluation
             });
             result.evaluation = evaluation;
             logger.info('Monitoring daemon: fetchAgeEvaluation(): Age evaluation: ' + JSON.stringify(evaluation));
