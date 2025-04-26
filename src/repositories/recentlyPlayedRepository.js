@@ -47,10 +47,10 @@ async function addRecentlyPlayed(spotifyUserId, spotifyTrackId, playedAt) {
 /**
  * Get recently played tracks for a user
  * @param {string} spotifyUserId - The Spotify user ID
- * @param {number} limit - The maximum number of entries to return (default: 25)
+ * @param {number} limit - The maximum number of entries to return (default: 50)
  * @returns {Promise<Array>} - Array of recently played tracks
  */
-async function getRecentlyPlayedByUser(spotifyUserId, limit = 25) {
+async function getRecentlyPlayedByUser(spotifyUserId, limit = 50) {
   try {
     const recentlyPlayed = await RecentlyPlayed.findAll({
       where: {
