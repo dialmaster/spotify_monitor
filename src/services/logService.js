@@ -54,9 +54,24 @@ const getLogFilePath = () => {
  */
 const logPlaybackStarted = (item, type) => {
   if (!item || !item.id) return false;
+  // Only skip logging if this is the most recently played item
+  if (trackingMap.has(item.id)) {
+    // Get the most recent item from the tracking map
+    let mostRecentItem = null;
+    let mostRecentTimestamp = 0;
 
-  // Only log if this is a new playback (not already being tracked)
-  if (trackingMap.has(item.id)) return false;
+    for (const [id, data] of trackingMap.entries()) {
+      if (data.timestamp > mostRecentTimestamp) {
+        mostRecentTimestamp = data.timestamp;
+        mostRecentItem = id;
+      }
+    }
+
+    // Only return false if this is the most recently played item
+    if (mostRecentItem === item.id) {
+      return false;
+    }
+  }
 
   // Add to tracking map with timestamp
   trackingMap.set(item.id, {

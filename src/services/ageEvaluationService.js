@@ -254,10 +254,11 @@ const parseResponseAndGenerateEvaluation = (completion, id, lyricsSource, type, 
  * @param {string} params.artist - Artist name (for tracks)
  * @param {string} params.description - Episode description (for podcasts)
  * @param {string} params.spotifyUrl - Spotify URL of the content
+ * @param {boolean} params.forceReEvaluation - Force re-evaluation instead of using cached result
  * @returns {Promise<Object>} - Age evaluation result
  */
 const evaluateContentAge = async (params) => {
-  const { id, type, title } = params;
+  const { id, type, title, forceReEvaluation } = params;
 
   if (!id || !type || !title) {
     throw new Error('Missing required parameters: id, type, and title');
@@ -270,7 +271,11 @@ const evaluateContentAge = async (params) => {
 
   const spotifyUser = await spotifyService.getCurrentUserProfile();
 
-  const cachedResult = await aiEvaluationRepository.findEvaluation(id, spotifyUser.id);
+  // Only check for cached results if not forcing re-evaluation
+  let cachedResult = null;
+  if (!forceReEvaluation) {
+    cachedResult = await aiEvaluationRepository.findEvaluation(id, spotifyUser.id);
+  }
 
   if (cachedResult) {
     // Return cached result in the SAME FORMAT as the OpenAI response

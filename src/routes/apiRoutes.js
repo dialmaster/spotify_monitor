@@ -93,7 +93,7 @@ router.get('/recently-played', async (req, res) => {
 
     try {
       // Get recently played tracks using the service
-      const mergedHistory = await recentlyPlayedService.getRecentlyPlayed(25);
+      const mergedHistory = await recentlyPlayedService.getRecentlyPlayed(50);
       res.json(mergedHistory);
     } catch (error) {
       console.error('Error retrieving recently played history:', error.message);
