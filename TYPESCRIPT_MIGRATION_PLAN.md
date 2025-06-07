@@ -10,6 +10,7 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 4. **Test as You Go**: Validate each component after migration
 5. **Documentation**: Update relevant docs as we progress
 6. **Track Discoveries**: As tasks are completed, always document any issues encountered, workarounds applied, or information that subsequent steps will need. Update future steps proactively when dependencies or prerequisites are discovered.
+7. **Progress Tracking**: **IMPORTANT**: As tasks are completed, update this migration plan by marking items with `[x]` and adding completion notes. This ensures we can track our progress and maintain an accurate record of what has been accomplished.
 
 ## Phase 0: Foundation Setup (No Code Changes)
 
@@ -29,18 +30,20 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 - [x] **Validation**: Run `npx tsc --noEmit` - should complete without errors
 
 ### 0.2 Build Process Setup
-- [ ] Install development dependencies
+- [x] Install development dependencies
   ```bash
   npm install --save-dev concurrently rimraf
   ```
-- [ ] Add npm scripts to `package.json`:
-  - [ ] `"build": "tsc"`
-  - [ ] `"build:watch": "tsc --watch"`
-  - [ ] `"dev": "concurrently \"npm run build:watch\" \"nodemon dist/app.js\""`
-  - [ ] `"clean": "rimraf dist"`
-  - [ ] `"start": "node dist/app.js"`
-- [ ] Update `nodemon.json` to watch `dist/` directory
-- [ ] **Validation**: Run `npm run build` - should copy all JS files to `dist/`
+- [x] Add npm scripts to `package.json`:
+  - [x] `"build": "tsc"`
+  - [x] `"build:watch": "tsc --watch"`
+  - [x] `"dev": "concurrently \"npm run build:watch\" \"nodemon dist/app.js\""`
+  - [x] `"clean": "rimraf dist"`
+  - [x] `"start": "node dist/app.js"`
+- [x] Update `nodemon.json` to watch `dist/` directory
+  - **Note**: Created new `nodemon.json` file to watch `dist/` directory with JS extensions
+- [x] **Validation**: Run `npm run build` - should copy all JS files to `dist/`
+  - **Completed**: Build successfully generates all JS files with source maps in `dist/` directory
 
 ### 0.3 Docker Configuration Updates
 - [ ] Update `Dockerfile` to include build step
