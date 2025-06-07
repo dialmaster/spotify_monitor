@@ -51,6 +51,9 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
+# Build TypeScript code
+RUN npm run build
+
 # Set default config file (will be overridden by environment variable)
 ENV CONFIG_FILE=config.json
 
@@ -58,4 +61,4 @@ ENV CONFIG_FILE=config.json
 EXPOSE 8888
 
 # Default command (will be overridden by docker-compose)
-CMD ["sh", "-c", "node app.js ${CONFIG_FILE}"]
+CMD ["sh", "-c", "node dist/app.js ${CONFIG_FILE}"]

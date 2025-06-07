@@ -46,10 +46,13 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
   - **Completed**: Build successfully generates all JS files with source maps in `dist/` directory
 
 ### 0.3 Docker Configuration Updates
-- [ ] Update `Dockerfile` to include build step
-- [ ] Ensure `dist/` directory is used for production
-- [ ] Update volume mounts in `docker-compose.yml` if needed
-- [ ] **Validation**: Build and run Docker container - application should work normally
+- [x] Update `Dockerfile` to include build step
+- [x] Ensure `dist/` directory is used for production
+- [x] Update volume mounts in `docker-compose.yml` if needed
+- [x] **Validation**: Build and run Docker container - application should work normally
+  - **Completed**: Dockerfile now includes `npm run build` step and uses `dist/app.js` as entry point
+  - **Tested**: Docker build completes successfully with TypeScript compilation
+  - **Validated**: Container starts and application runs properly from compiled code
 
 ## Phase 1: Type Definitions and Simple Modules
 
