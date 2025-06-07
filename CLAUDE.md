@@ -126,4 +126,12 @@ No predefined test scripts. When implementing tests:
 
 ## Current Development Focus
 
-Refactor to use typescript.
+Branch: `feat/switch-to-typescript`
+- Migrating project from JavaScript to TypeScript
+- Following incremental migration approach
+- Maintaining functionality throughout the process
+
+## TypeScript Migration
+
+A comprehensive plan for migrating this project to TypeScript is available:
+- [TypeScript Migration Plan](./TYPESCRIPT_MIGRATION_PLAN.md)

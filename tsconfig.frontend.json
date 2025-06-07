@@ -1,0 +1,59 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ES2020",
+    
+    /* Modules */
+    "moduleResolution": "node",
+    "baseUrl": "./public",
+    "paths": {
+      "@/*": ["js/*"]
+    },
+    
+    /* JavaScript Support */
+    "allowJs": true,
+    "checkJs": false,
+    
+    /* Emit */
+    "outDir": "./dist/public",
+    "rootDir": "./public",
+    "removeComments": true,
+    "sourceMap": true,
+    "declaration": false,
+    "noEmit": true, // Frontend will use bundler (Vite) later
+    
+    /* Type Checking */
+    "strict": false, // Will enable later in migration
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": false,
+    "alwaysStrict": false,
+    
+    /* Additional Checks */
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": false,
+    
+    /* Module Resolution */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    
+    /* Completeness */
+    "skipLibCheck": true
+  },
+  "include": [
+    "public/js/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

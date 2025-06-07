@@ -1,0 +1,74 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "module": "commonjs",
+    
+    /* Modules */
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "resolveJsonModule": true,
+    
+    /* JavaScript Support */
+    "allowJs": true,
+    "checkJs": false,
+    "maxNodeModuleJsDepth": 0,
+    
+    /* Emit */
+    "outDir": "./dist",
+    "rootDir": "./",
+    "removeComments": true,
+    "sourceMap": true,
+    "declaration": false, // Temporarily disabled due to TS4094 errors in JS files
+    "declarationMap": false, // Will re-enable after migrating problematic files
+    
+    /* Type Checking */
+    "strict": false, // Will enable later in migration
+    "noImplicitAny": false, // Will enable later
+    "strictNullChecks": false, // Will enable later
+    "strictFunctionTypes": false, // Will enable later
+    "strictBindCallApply": false, // Will enable later
+    "strictPropertyInitialization": false, // Will enable later
+    "noImplicitThis": false, // Will enable later
+    "alwaysStrict": false, // Will enable later
+    "isolatedModules": true, // Required for ts-node
+    
+    /* Additional Checks */
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": false,
+    
+    /* Module Resolution */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    
+    /* Completeness */
+    "skipLibCheck": true,
+    
+    /* Additional TypeScript Options */
+    "useUnknownInCatchVariables": false,
+    "exactOptionalPropertyTypes": false,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": [
+    "src/**/*",
+    "app.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "public",
+    "logs",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "src/models/*.js", // Temporarily exclude models until migration
+    "src/services/monitoringDaemon.js" // Temporarily exclude until migration
+  ]
+}
