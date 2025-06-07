@@ -56,13 +56,35 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 
 ## Phase 1: Type Definitions and Simple Modules
 
-### 1.1 Create Type Definition Files
-- [ ] Create `src/types/index.d.ts` for shared types
-- [ ] Define configuration interface based on `config.json.example`
-  - [ ] Main config structure
-  - [ ] Age evaluation config
-  - [ ] Optional API keys
-- [ ] Define common types (User, Track, Evaluation, etc.)
+### 1.1 Create Type Definition Structure
+- [ ] Create `src/types/` directory with organized type files:
+  - [ ] `config.types.ts` - Configuration interfaces
+    - [ ] Main config structure based on `config.json.example`
+    - [ ] Age evaluation config
+    - [ ] Optional API keys (Genius, CallMeBot, etc.)
+  - [ ] `spotify.types.ts` - Spotify API related types
+    - [ ] Authentication tokens and responses
+    - [ ] Track, Artist, Album interfaces
+    - [ ] Playback state and player types
+  - [ ] `database.types.ts` - Database model types
+    - [ ] Track attributes and methods
+    - [ ] AI Evaluation attributes
+    - [ ] Recently Played attributes
+    - [ ] Spotify Auth attributes
+  - [ ] `api.types.ts` - API request/response types
+    - [ ] Express request extensions
+    - [ ] API response formats
+    - [ ] Route parameter types
+  - [ ] `service.types.ts` - Service layer types
+    - [ ] Lyrics service responses
+    - [ ] Age evaluation results
+    - [ ] Cache service types
+    - [ ] SSE event types
+  - [ ] `common.types.ts` - Shared types
+    - [ ] Status types (already in statusTypes.js)
+    - [ ] User types
+    - [ ] Error types
+  - [ ] `index.ts` - Re-export all types for convenience
 - [ ] **Validation**: Types compile without errors
 
 ### 1.2 Migrate Configuration Module
@@ -91,7 +113,7 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 
 ### 2.2 Migrate Database Models
 - [ ] Convert `src/models/Track.js` to `Track.ts`
-  - [ ] Define interface for Track attributes
+  - [ ] Import types from `src/types/database.types.ts`
   - [ ] Add proper Sequelize decorators if using sequelize-typescript
   - [ ] Type all model methods
 - [ ] Convert `src/models/AiEvaluation.js` to `AiEvaluation.ts`
@@ -124,25 +146,25 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 
 ### 3.2 External Integration Services
 - [ ] Convert `src/services/callMeBotService.js` to `callMeBotService.ts`
-  - [ ] Type API responses
+  - [ ] Import types from `src/types/service.types.ts`
   - [ ] Type notification methods
 - [ ] Convert `src/services/lyricsService.js` to `lyricsService.ts`
-  - [ ] Type Genius API responses
+  - [ ] Import Genius API types from `src/types/service.types.ts`
   - [ ] Type Puppeteer operations
-  - [ ] Type lyrics response structure
+  - [ ] Use lyrics response types from type files
 - [ ] **Validation**: Test lyrics retrieval from all sources
 
 ### 3.3 Core Services
 - [ ] Convert `src/services/spotifyService.js` to `spotifyService.ts`
-  - [ ] Type Spotify API responses
-  - [ ] Type authentication flow
-  - [ ] Type playback state
+  - [ ] Import Spotify types from `src/types/spotify.types.ts`
+  - [ ] Use authentication flow types
+  - [ ] Use playback state types
 - [ ] Convert `src/services/ageEvaluationService.js` to `ageEvaluationService.ts`
+  - [ ] Import evaluation types from `src/types/service.types.ts`
   - [ ] Type OpenAI API interactions
-  - [ ] Type evaluation responses
 - [ ] Convert `src/services/recentlyPlayed.js` to `recentlyPlayed.ts`
 - [ ] Convert `src/services/sseService.js` to `sseService.ts`
-  - [ ] Type SSE events
+  - [ ] Import SSE types from `src/types/service.types.ts`
   - [ ] Type client connections
 - [ ] **Validation**: Full monitoring flow works end-to-end
 
@@ -158,13 +180,13 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 
 ### 4.1 Route Migration
 - [ ] Convert `src/routes/authRoutes.js` to `authRoutes.ts`
-  - [ ] Type Express request/response
-  - [ ] Type route handlers
+  - [ ] Import Express types from `src/types/api.types.ts`
+  - [ ] Type route handlers with proper request/response types
 - [ ] Convert `src/routes/apiRoutes.js` to `apiRoutes.ts`
-  - [ ] Type API responses
-  - [ ] Type request parameters
+  - [ ] Use API response types from `src/types/api.types.ts`
+  - [ ] Type request parameters properly
 - [ ] Convert `src/routes/webRoutes.js` to `webRoutes.ts`
-  - [ ] Type view rendering
+  - [ ] Type view rendering responses
 - [ ] **Validation**: Test all endpoints with Postman/curl
 
 ### 4.2 Main Application Files
@@ -188,9 +210,17 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 - [ ] Add frontend build scripts to package.json
 - [ ] **Validation**: Frontend builds without errors
 
-### 5.2 Convert to ES Modules
-- [ ] Create `public/js/nowplaying/types.ts` for frontend types
-- [ ] Convert each module to use ES6 imports/exports:
+### 5.2 Frontend Type Definitions
+- [ ] Create `public/js/types/` directory with organized type files:
+  - [ ] `player.types.ts` - Player state and control types
+  - [ ] `ui.types.ts` - UI component and modal types
+  - [ ] `api.types.ts` - Frontend API request/response types
+  - [ ] `spotify.types.ts` - Frontend Spotify data types
+  - [ ] `common.types.ts` - Shared frontend types
+  - [ ] `index.ts` - Re-export all frontend types
+
+### 5.3 Convert to ES Modules
+- [ ] Convert each module to use ES6 imports/exports and TypeScript:
   - [ ] `elements.js` → `elements.ts`
   - [ ] `utils.js` → `utils.ts`
   - [ ] `toast.js` → `toast.ts`
@@ -217,8 +247,14 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 ### 6.2 Update Documentation
 - [ ] Update README.md with new build instructions
 - [ ] Update CLAUDE.md with TypeScript development info
+  - [ ] Document the types directory structure
+  - [ ] Explain type file organization and naming conventions
+  - [ ] Add import examples for common types
 - [ ] Document any new npm scripts
 - [ ] Add TypeScript best practices for the project
+  - [ ] Type file naming convention (*.types.ts)
+  - [ ] When to create new type files vs extending existing ones
+  - [ ] Import/export patterns for types
 - [ ] **Validation**: New developers can follow docs to get started
 
 ## Phase 7: Cleanup and Optimization
@@ -280,3 +316,12 @@ After completing the migration, ensure:
 - Can pause after any phase if needed
 - Each phase is designed to leave the app in a working state
 - Consider adding tests during migration for critical paths
+
+### Type Organization Strategy
+
+The migration uses a modular types directory structure instead of a single types file:
+- **Backend types** in `src/types/` organized by domain (spotify, database, config, etc.)
+- **Frontend types** in `public/js/types/` organized by functionality
+- Each type file is named with `.types.ts` suffix for clarity
+- `index.ts` files provide convenient re-exports
+- This approach improves maintainability, reduces conflicts, and makes imports cleaner
