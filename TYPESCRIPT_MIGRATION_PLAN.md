@@ -11,6 +11,18 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 5. **Documentation**: Update relevant docs as we progress
 6. **Track Discoveries**: As tasks are completed, always document any issues encountered, workarounds applied, or information that subsequent steps will need. Update future steps proactively when dependencies or prerequisites are discovered.
 7. **Progress Tracking**: **IMPORTANT**: As tasks are completed, update this migration plan by marking items with `[x]` and adding completion notes. This ensures we can track our progress and maintain an accurate record of what has been accomplished.
+8. **Keep CLAUDE.md Updated**: **IMPORTANT**: After completing each phase or making significant changes, update CLAUDE.md to reflect the current state of the project. This includes updating build commands, type system documentation, development guidelines, and any new patterns or conventions introduced during the migration.
+
+## Key Lessons Learned
+
+### Build Process Requirements
+1. **Static Assets Must Be Copied**: The build process must copy `views/` and `public/` directories to `dist/` using copyfiles
+2. **No Exclusions During Migration**: Do not exclude any JavaScript files in `tsconfig.json` that are still needed by the app
+3. **Clean Builds**: Always run `npm run clean` before `npm run build` when troubleshooting
+
+### Known Issues
+1. **Declaration Generation**: Currently disabled (`declaration: false`) due to TS4094 errors with `monitoringDaemon.js`
+2. **Frontend Files**: Client-side JavaScript in `public/js/` is currently copied as-is; will need bundling in Phase 5
 
 ## Phase 0: Foundation Setup (No Code Changes)
 
@@ -53,39 +65,45 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
   - **Completed**: Dockerfile now includes `npm run build` step and uses `dist/app.js` as entry point
   - **Tested**: Docker build completes successfully with TypeScript compilation
   - **Validated**: Container starts and application runs properly from compiled code
+  - **Important Discovery**: Build process must copy static assets (views, public) to dist directory
+  - **Build Script Updated**: Added copyfiles to handle views and public directories
+  - **Critical Note**: During incremental migration, ALL JavaScript files must be included in compilation (no exclusions in tsconfig.json)
 
 ## Phase 1: Type Definitions and Simple Modules
 
 ### 1.1 Create Type Definition Structure
-- [ ] Create `src/types/` directory with organized type files:
-  - [ ] `config.types.ts` - Configuration interfaces
-    - [ ] Main config structure based on `config.json.example`
-    - [ ] Age evaluation config
-    - [ ] Optional API keys (Genius, CallMeBot, etc.)
-  - [ ] `spotify.types.ts` - Spotify API related types
-    - [ ] Authentication tokens and responses
-    - [ ] Track, Artist, Album interfaces
-    - [ ] Playback state and player types
-  - [ ] `database.types.ts` - Database model types
-    - [ ] Track attributes and methods
-    - [ ] AI Evaluation attributes
-    - [ ] Recently Played attributes
-    - [ ] Spotify Auth attributes
-  - [ ] `api.types.ts` - API request/response types
-    - [ ] Express request extensions
-    - [ ] API response formats
-    - [ ] Route parameter types
-  - [ ] `service.types.ts` - Service layer types
-    - [ ] Lyrics service responses
-    - [ ] Age evaluation results
-    - [ ] Cache service types
-    - [ ] SSE event types
-  - [ ] `common.types.ts` - Shared types
-    - [ ] Status types (already in statusTypes.js)
-    - [ ] User types
-    - [ ] Error types
-  - [ ] `index.ts` - Re-export all types for convenience
-- [ ] **Validation**: Types compile without errors
+- [x] Create `src/types/` directory with organized type files:
+  - [x] `config.types.ts` - Configuration interfaces
+    - [x] Main config structure based on `config.json.example`
+    - [x] Age evaluation config
+    - [x] Optional API keys (Genius, CallMeBot, etc.)
+  - [x] `spotify.types.ts` - Spotify API related types
+    - [x] Authentication tokens and responses
+    - [x] Track, Artist, Album interfaces
+    - [x] Playback state and player types
+  - [x] `database.types.ts` - Database model types
+    - [x] Track attributes and methods
+    - [x] AI Evaluation attributes
+    - [x] Recently Played attributes
+    - [x] Spotify Auth attributes
+  - [x] `api.types.ts` - API request/response types
+    - [x] Express request extensions
+    - [x] API response formats
+    - [x] Route parameter types
+  - [x] `service.types.ts` - Service layer types
+    - [x] Lyrics service responses
+    - [x] Age evaluation results
+    - [x] Cache service types
+    - [x] SSE event types
+  - [x] `common.types.ts` - Shared types
+    - [x] Status types (already in statusTypes.js)
+    - [x] User types
+    - [x] Error types
+  - [x] `index.ts` - Re-export all types for convenience
+- [x] **Validation**: Types compile without errors
+  - **Completed**: All type files created successfully
+  - **Build output**: Types are compiled to `dist/src/types/`
+  - **No compilation errors**: `npx tsc --noEmit` runs successfully
 
 ### 1.2 Migrate Configuration Module
 - [ ] Convert `src/config/index.js` to `index.ts`
@@ -174,6 +192,7 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
   - [ ] Type monitoring intervals
   - [ ] Ensure proper async typing
   - [ ] **Important**: This file exports a class instance (`module.exports = new MonitoringDaemon()`), which causes TS4094 errors when `declaration: true`. Will need to refactor the export pattern or keep declarations disabled until resolved.
+  - [ ] **Build Note**: This file must be included in compilation during migration phase (not excluded in tsconfig.json) or the app will fail at runtime
 - [ ] **Validation**: Daemon starts and monitors correctly
 
 ## Phase 4: Routes and Middleware
@@ -200,6 +219,11 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 
 ## Phase 5: Frontend Migration
 
+**Note**: Currently, frontend JavaScript files in `public/js/` are copied directly to `dist/public/js/` by the build process. Once these files are migrated to TypeScript and bundled, we'll need to:
+1. Remove the `copy-public` script for JS files (keep it for CSS, images, manifest)
+2. Update the build process to handle bundled frontend code
+3. Update HTML files to reference the bundled JavaScript
+
 ### 5.1 Frontend Build Setup
 - [ ] Choose and set up bundler (Vite recommended)
   ```bash
@@ -208,6 +232,7 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
 - [ ] Create `vite.config.ts` for frontend build
 - [ ] Set up frontend TypeScript configuration
 - [ ] Add frontend build scripts to package.json
+- [ ] Update copy-public script to exclude JS files once bundled
 - [ ] **Validation**: Frontend builds without errors
 
 ### 5.2 Frontend Type Definitions

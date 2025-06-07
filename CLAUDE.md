@@ -57,11 +57,14 @@ docker compose ls
 # Install dependencies
 npm install
 
-# Run directly (requires local PostgreSQL)
-node app.js
+# Build TypeScript files
+npm run build
 
-# Run with auto-reload
-npx nodemon app.js
+# Run the built application (requires local PostgreSQL)
+npm start
+
+# Run with auto-reload and TypeScript watch
+npm run dev
 ```
 
 ### Database Operations
@@ -135,3 +138,62 @@ Branch: `feat/switch-to-typescript`
 
 A comprehensive plan for migrating this project to TypeScript is available:
 - [TypeScript Migration Plan](./TYPESCRIPT_MIGRATION_PLAN.md)
+
+### TypeScript Development
+
+**Build Commands**:
+```bash
+# Build TypeScript files
+npm run build
+
+# Build with watch mode
+npm run build:watch
+
+# Run development server with auto-rebuild
+npm run dev
+
+# Type check without building
+npx tsc --noEmit
+```
+
+**Type Organization**:
+The project uses a modular type system located in `src/types/`:
+- `config.types.ts` - Application configuration interfaces
+- `spotify.types.ts` - Spotify API types (auth, tracks, playback, etc.)
+- `database.types.ts` - Sequelize model types
+- `api.types.ts` - Express request/response types
+- `service.types.ts` - Service layer types (lyrics, evaluation, SSE, etc.)
+- `common.types.ts` - Shared types (status, errors, pagination)
+- `index.ts` - Central export point for all types
+
+**Import Examples**:
+```typescript
+// Import specific types
+import { AppConfig, SpotifyTrack } from '../types';
+
+// Import from specific type files
+import { AgeEvaluationResponse } from '../types/service.types';
+```
+
+**TypeScript Guidelines**:
+- All TypeScript files compile to `dist/` directory
+- Source maps are generated for debugging
+- Currently using `allowJs: true` for incremental migration
+- Type files use `.types.ts` suffix for clarity
+- Interfaces preferred over type aliases where applicable
+
+**Build Process Details**:
+- TypeScript compilation: `tsc` compiles all `.ts` and `.js` files to `dist/`
+- Static assets: Views (EJS templates) and public files (CSS, JS, images) are copied to `dist/` using copyfiles
+- Build command: `npm run build` runs TypeScript compilation followed by asset copying
+- Important: During migration, do NOT exclude any JavaScript files from `tsconfig.json` that are still needed by the app
+- The `dist/` directory structure mirrors the source structure:
+  - `dist/src/` - Compiled TypeScript/JavaScript files
+  - `dist/views/` - EJS templates
+  - `dist/public/` - Static assets (CSS, client-side JS, images, manifest)
+
+**Common Build Issues**:
+- If models are undefined at runtime: Check that no `.js` files are excluded in `tsconfig.json`
+- If views are not found: Ensure `copy-views` script is running in the build process
+- If static assets (CSS/JS) return 404: Verify `copy-public` script is copying all files with `-a` flag
+- Always run `npm run clean` before `npm run build` if experiencing issues

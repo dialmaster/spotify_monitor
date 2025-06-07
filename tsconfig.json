@@ -67,8 +67,6 @@
     "public",
     "logs",
     "**/*.spec.ts",
-    "**/*.test.ts",
-    "src/models/*.js", // Temporarily exclude models until migration
-    "src/services/monitoringDaemon.js" // Temporarily exclude until migration
+    "**/*.test.ts"
   ]
 }
