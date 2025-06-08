@@ -1,8 +1,9 @@
-const fs = require('fs');
-const path = require('path');
+import * as fs from 'fs';
+import * as path from 'path';
+import { AppConfig } from '../types';
 
 // Helper function to check if a config value is a placeholder from the example file
-const isPlaceholderValue = (value) => {
+const isPlaceholderValue = (value: string): boolean => {
   const placeholders = [
     'YOUR_SPOTIFY_CLIENT_ID',
     'YOUR_SPOTIFY_CLIENT_SECRET',
@@ -16,7 +17,7 @@ const isPlaceholderValue = (value) => {
 };
 
 // Load config
-const loadConfig = (configPath) => {
+const loadConfig = (configPath: string): any => {
   try {
     const configData = fs.readFileSync(path.join(process.cwd(), configPath), 'utf8');
     return JSON.parse(configData);
@@ -27,7 +28,7 @@ const loadConfig = (configPath) => {
 };
 
 // Use command line arg to specify config file or default to config.json
-const getConfigPath = () => {
+const getConfigPath = (): string => {
   return process.argv[2] || 'config.json';
 };
 
@@ -36,7 +37,7 @@ const configPath = getConfigPath();
 const rawConfig = loadConfig(configPath);
 
 // Config object with all validated settings
-const config = {
+const config: AppConfig = {
   // Spotify API credentials
   clientId: rawConfig.clientId,
   clientSecret: rawConfig.clientSecret,
@@ -78,25 +79,25 @@ const config = {
     : '',
 
   // Helper method to check if a feature is enabled
-  hasGeniusLyrics: function() {
+  hasGeniusLyrics: function(): boolean {
     return !!this.geniusApiKey;
   },
 
-  hasAgeEvaluation: function() {
+  hasAgeEvaluation: function(): boolean {
     return !!this.openAiApiKey;
   },
 
-  hasSpotifyWebAccess: function() {
+  hasSpotifyWebAccess: function(): boolean {
     return !!this.spotifyWebCookies;
   },
 
-  hasCallMeBot: function() {
+  hasCallMeBot: function(): boolean {
     return !!this.callMeBotUrl;
   },
 
-  getConfigPath: function() {
+  getConfigPath: function(): string {
     return configPath;
   }
 };
 
-module.exports = config;
+export = config;

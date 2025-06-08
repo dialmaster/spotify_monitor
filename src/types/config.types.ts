@@ -40,21 +40,33 @@ export interface AppConfig {
   /** CallMeBot API URL for notifications (optional) */
   callMeBotUrl?: string;
   /** Whether to automatically skip blocked tracks */
-  autoSkipBlocked?: boolean;
+  autoSkipBlocked: boolean;
   /** Monitoring interval in milliseconds */
-  monitorInterval?: number;
+  monitorInterval: number;
   /** Genius API key for lyrics (optional) */
   geniusApiKey?: string;
   /** OpenAI API key for age evaluation */
-  openAiApiKey: string;
+  openAiApiKey?: string;
   /** List of whitelisted track IDs */
-  whitelistTrackIDs?: string[];
+  whitelistTrackIDs: string[];
   /** Age evaluation configuration */
-  ageEvaluation?: AgeEvaluationConfig;
+  ageEvaluation: AgeEvaluationConfig;
   /** Spotify Web cookies string or parsed cookies */
-  spotifyWebCookies?: string | SpotifyWebCookies;
+  spotifyWebCookies: string | SpotifyWebCookies;
   /** Database configuration (optional) */
   database?: DatabaseConfig;
+  
+  // Helper methods
+  /** Check if Genius lyrics are available */
+  hasGeniusLyrics(): boolean;
+  /** Check if age evaluation is available */
+  hasAgeEvaluation(): boolean;
+  /** Check if Spotify Web access is available */
+  hasSpotifyWebAccess(): boolean;
+  /** Check if CallMeBot is configured */
+  hasCallMeBot(): boolean;
+  /** Get the configuration file path */
+  getConfigPath(): string;
 }
 
 /**

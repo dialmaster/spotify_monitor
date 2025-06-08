@@ -1,7 +1,13 @@
-// src/config/database.js
-const config = require('./index');
+// src/config/database.ts
+import config = require('./index');
+import { DatabaseConfig } from '../types';
 
-module.exports = {
+interface SequelizeEnvironmentConfig {
+  development: DatabaseConfig;
+  production: DatabaseConfig;
+}
+
+const databaseConfig: SequelizeEnvironmentConfig = {
   development: {
     username: process.env.POSTGRES_USER || 'spotify',
     password: process.env.POSTGRES_PASSWORD || 'spotify_password',
@@ -21,3 +27,5 @@ module.exports = {
     logging: false
   }
 };
+
+export = databaseConfig;
