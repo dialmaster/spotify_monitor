@@ -19,3 +19,8 @@ export * from './service.types';
 
 // Common shared types
 export * from './common.types';
+
+// Status types (note: StatusType conflicts with common.types, so we export with different names)
+import statusTypesModule = require('./statusTypes');
+export const statusTypes = statusTypesModule;
+export type { StatusType as StatusTypeConstant } from './statusTypes';

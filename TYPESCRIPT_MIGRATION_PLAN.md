@@ -120,9 +120,20 @@ This document outlines a step-by-step plan to migrate the Spotify Monitor projec
   - **Note**: Made openAiApiKey optional in types to match actual usage
 
 ### 1.3 Migrate Simple Utilities
-- [ ] Convert `src/types/statusTypes.js` to `statusTypes.ts`
-- [ ] Convert logging utilities if any
-- [ ] **Validation**: Check logs are still being written correctly
+- [x] Convert `src/types/statusTypes.js` to `statusTypes.ts`
+  - [x] Created TypeScript version with proper type exports
+  - [x] Used module.exports for backward compatibility
+  - [x] Updated types index to handle naming conflicts
+- [x] Convert logging utilities if any
+  - [x] Converted `src/services/logService.js` to TypeScript
+  - [x] Added proper types for Winston logger
+  - [x] Created interfaces for tracking data and playback items
+  - [x] Used module.exports pattern for compatibility
+- [x] **Validation**: Check logs are still being written correctly
+  - **Completed**: Build succeeds without errors
+  - **TypeScript compilation**: All files compile properly
+  - **Backward compatibility**: Module.exports pattern ensures existing require() calls work
+  - **Note**: logService is in services directory (will be part of Phase 3.1 in the plan)
 
 ## Phase 2: Data Layer Migration
 
